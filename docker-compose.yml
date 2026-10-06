@@ -10,7 +10,7 @@ services:
       - .env
     command: sh -c "composer install --no-interaction && php artisan serve --host=0.0.0.0 --port=8000"
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       mysql:
         condition: service_healthy
@@ -25,7 +25,7 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD:-leggtix-local}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-leggtix-root-local}
     ports:
-      - "3306:3306"
+      - "127.0.0.1:3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
@@ -37,7 +37,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
