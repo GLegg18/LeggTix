@@ -33,7 +33,37 @@ docker compose exec app php artisan migrate
 
 Open [http://localhost:8000/up](http://localhost:8000/up). Laravel's health endpoint should return a successful response. The initial migrations are intentionally empty; application tables arrive with their feature work.
 
-To stop the services, run `docker compose down`. Add `-v` only when you also want to remove the local MySQL data volume.
+To stop the services while keeping the MySQL data, run `docker compose down`.
+
+## Reset local data
+
+To drop and recreate the application's tables while keeping the containers and MySQL volume, run:
+
+```powershell
+docker compose exec app php artisan migrate:fresh
+```
+
+To remove all local MySQL data as well as stop the services, run:
+
+```powershell
+docker compose down --volumes
+```
+
+Then start the stack and migrate again:
+
+```powershell
+docker compose up --build -d
+docker compose exec app php artisan migrate
+```
+
+`migrate:fresh` and `down --volumes` are destructive to local database data.
+
+## Troubleshooting
+
+- If Compose cannot connect to Docker, start Docker Desktop and wait for its engine to finish starting, then retry `docker compose up --build -d`.
+- If a port is already in use, stop the other service using port `8000`, `3306`, or `6379`, or change the host port while keeping the `127.0.0.1` loopback address in the corresponding mapping in `docker-compose.yml`.
+- If MySQL is unhealthy or the app reports a database connection error, check `docker compose ps` and `docker compose logs mysql`; the app waits for MySQL's health check. Confirm `.env` has the Compose defaults (`DB_HOST=mysql` and matching database credentials), then retry `docker compose up -d`.
+- For application startup errors, inspect `docker compose logs app`. The app container runs `composer install` on startup, so dependency installation errors may require network access or a later retry.
 
 ## Useful commands
 
