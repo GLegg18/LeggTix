@@ -61,4 +61,4 @@ Controllers should validate requests and coordinate small action/service classes
 
 ## Current scope
 
-This is the project skeleton only. Authentication, event management, reservations, waitlist promotion, seed data, and feature tests are planned for later milestones. See [the project spec](event-reservation-mini-project-spec.md) for the intended business rules and trade-offs.
+This is the project skeleton only. Authentication, event management, reservations, waitlist promotion, seed data, and feature tests are planned for later milestones.
