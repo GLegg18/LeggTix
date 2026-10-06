@@ -62,3 +62,7 @@ Controllers should validate requests and coordinate small action/service classes
 ## Current scope
 
 This is the project skeleton only. Authentication, event management, reservations, waitlist promotion, seed data, and feature tests are planned for later milestones.
+
+## Design documentation
+
+The [documentation index](docs/README.md) links the [database design for issue #27](docs/database-design.md) and its ER diagram. It records the proposed MVP schema, ownership and role decisions, lifecycle constraints, concurrency protocol, and deferred ticketing features before migrations are implemented.
