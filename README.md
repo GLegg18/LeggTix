@@ -1,6 +1,6 @@
 # LeggTix
 
-LeggTix is an API-first event reservation and waitlist service. The backend is a Laravel modular monolith; the first milestone establishes the application and local development environment before event and reservation features are added.
+LeggTix is an API-first event reservation and waitlist service. The backend is a Laravel modular monolith with registration, bearer-token authentication, and the five-table MVP schema. Event and reservation workflows are the next milestones.
 
 ## Stack
 
@@ -10,7 +10,7 @@ LeggTix is an API-first event reservation and waitlist service. The backend is a
 - Docker Compose for the local services
 - PHPUnit for the Laravel test runner
 
-The API is the priority. A Nuxt frontend and Filament admin panel are optional follow-on work and are not part of this bootstrap.
+The API is the priority. A Nuxt frontend and Filament admin panel are optional follow-on work.
 
 ## Prerequisites
 
@@ -31,7 +31,11 @@ docker compose exec app php artisan key:generate
 docker compose exec app php artisan migrate
 ```
 
-Open [http://localhost:8000/up](http://localhost:8000/up). Laravel's health endpoint should return a successful response. The initial migrations are intentionally empty; application tables arrive with their feature work.
+Open [http://localhost:8000/up](http://localhost:8000/up). Laravel's health endpoint should return a successful response. Migrations create `users`, `event_types`, `events`, `reservations`, `waitlist_entries`, and Sanctum's `personal_access_tokens`, alongside Laravel's migration history. No sample accounts or event data are inserted.
+
+Use the [authentication API guide](docs/authentication.md) to register, log in, fetch the current user, and revoke a token. The API returns JSON errors even when a client omits its `Accept` header.
+
+After migrating, use the [testing guide](docs/testing.md) for the isolated Docker runner and the [manual acceptance checks](docs/manual-test-plan.md) for the live app walkthrough and expected results.
 
 To stop the services while keeping the MySQL data, run `docker compose down`.
 
@@ -70,9 +74,12 @@ docker compose exec app php artisan migrate
 ```powershell
 docker compose logs -f app
 docker compose exec app php artisan
-docker compose exec app php artisan test
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1
 docker compose exec app php artisan migrate:status
+docker compose exec app php artisan sanctum:prune-expired --hours=24
 ```
+
+The test script creates a fresh, isolated MySQL container and test database, builds the test image, runs migrations and test fixtures, and removes its temporary stack afterwards. Docker Desktop must be running in Linux-container mode; the normal app stack does not need to be running. No manual database creation or grants are needed. See the [testing guide](docs/testing.md) for filters, cleanup and troubleshooting. Tests still refuse an unsafe database before migrations.
 
 ## Project shape
 
@@ -91,8 +98,12 @@ Controllers should validate requests and coordinate small action/service classes
 
 ## Current scope
 
-This is the project skeleton only. Authentication, event management, reservations, waitlist promotion, seed data, and feature tests are planned for later milestones.
+Registration creates only `regular_user` accounts. Login issues a Laravel Sanctum token that expires after 24 hours; logout revokes the current token. The [authentication guide](docs/authentication.md) documents validation, response contracts, token handling, and rate limits.
+
+The [MVP schema](docs/database-design.md) is implemented with MySQL constraints, generated active uniqueness keys, restricted foreign keys, and UTC `DATETIME(6)` domain timestamps. Its row constraints do not implement booking capacity allocation or cross-table reservation/waitlist rules. Event management, reservation and waitlist actions, their policies and locking protocol, domain seed data, password reset, and email verification remain follow-on work. There are no domain endpoints yet.
 
 ## Design documentation
 
 The [documentation index](docs/README.md) links the [database design for issue #27](docs/database-design.md), its ER diagram, [two-customer reservation races](docs/reservation-races.md), and the [staged ticketing extension plan](docs/ticketing-extensions.md). The five-table MVP remains the initial schema; venues, seating, teams, overlapping roles and payments have separate future designs and ticket handoffs.
+
+The [issue #5 verification report](docs/issue-5-validation.md) records the checks performed, review findings and remaining verification limits.

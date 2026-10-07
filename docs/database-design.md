@@ -8,7 +8,7 @@ Build five domain tables: `users`, `event_types`, `events`, `reservations`, and 
 
 For a concrete two-customer timeline, start with [reservation races: last place and same seat](reservation-races.md). The [staged ticketing extension plan](ticketing-extensions.md) explains how venues, assigned seats, organiser teams, independent roles and paid checkout can fit later while this MVP remains five tables.
 
-This is a proposed implementation contract for the next tickets, not a claim that these tables or protections already exist. The repository currently contains the Laravel skeleton with no domain migrations. Docker Compose selects MySQL 8.4; the design targets InnoDB on that version and the configured Laravel 13 / PHP 8.4 environment.
+This is the implementation contract for the MVP tickets. The initial [issue #5 implementation](authentication.md) now includes all five domain migrations and Sanctum authentication. Row-level database protections exist; event/reservation/waitlist actions, policies and transactional inventory protections remain downstream work. Docker Compose selects MySQL 8.4; the design targets InnoDB on that version and the configured Laravel 13 / PHP 8.4 environment.
 
 | Question | MVP decision | Reason |
 | --- | --- | --- |
@@ -57,7 +57,7 @@ The last decision interprets the spec's promotion as a free reservation, with jo
 
 Registration always creates `regular_user`. Role assignment uses trusted seed data or a separately authorised admin operation; registration and profile updates cannot accept role escalation. All roles can reserve/cancel their own places. Only organisers/admins create events; organisers manage only events they own, while admins may manage any event and event type.
 
-The proposed database column is a checked `VARCHAR`, cast to a PHP backed enum, rather than a MySQL `ENUM`. The feature is not implemented yet. Organiser/admin capabilities include the customer capability set: a person who sometimes organises can book someone else's event using the same account and role. Independent global roles and scoped team roles can be introduced later without duplicating user accounts; see [the migration path](ticketing-extensions.md).
+The database column is a checked `VARCHAR`, cast to the `UserRole` PHP backed enum, rather than a MySQL `ENUM`. Registration implements the safe default; role-management and domain permission checks remain later work. Organiser/admin capabilities include the customer capability set: a person who sometimes organises can book someone else's event using the same account and role. Independent global roles and scoped team roles can be introduced later without duplicating user accounts; see [the migration path](ticketing-extensions.md).
 
 Use Laravel's established authentication tooling. Token/password-reset/email-verification/session tables and fields belong to the chosen authentication flow in [#5](https://github.com/GLegg18/LeggTix/issues/5), not a custom credentials model. `email_verified_at` and `remember_token` can be added if that flow uses them. Keep tokens hashed and private using the selected Laravel tooling. No role index is needed for the core queries.
 
