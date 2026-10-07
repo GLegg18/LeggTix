@@ -13,7 +13,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // API routes use Laravel's stateless API middleware group.
+        // Avoid resolving a browser login route before API JSON exception rendering.
+        $middleware->redirectGuestsTo(null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
