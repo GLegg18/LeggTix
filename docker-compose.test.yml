@@ -1,0 +1,45 @@
+services:
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: test
+    environment:
+      APP_ENV: testing
+      APP_DEBUG: "false"
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_DATABASE: leggtix_test
+      DB_USERNAME: leggtix_test
+      DB_PASSWORD: leggtix-test-only
+      DB_URL: ""
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      LOG_CHANNEL: "null"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: leggtix_test
+      MYSQL_USER: leggtix_test
+      MYSQL_PASSWORD: leggtix-test-only
+      MYSQL_ROOT_PASSWORD: leggtix-test-root-only
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql --protocol=TCP --host=127.0.0.1 --user=$$MYSQL_USER --database=$$MYSQL_DATABASE --execute='SELECT 1' >/dev/null"]
+      interval: 2s
+      timeout: 5s
+      start_period: 20s
+      retries: 40
+
+networks:
+  default:
+    internal: true

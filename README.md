@@ -74,12 +74,12 @@ docker compose exec app php artisan migrate
 ```powershell
 docker compose logs -f app
 docker compose exec app php artisan
-docker compose exec -e DB_DATABASE=leggtix_test app php artisan test
+.\scripts\test.ps1
 docker compose exec app php artisan migrate:status
 docker compose exec app php artisan sanctum:prune-expired --hours=24
 ```
 
-The test command requires a separate `leggtix_test` database and grants for the local app user. Follow the [verification guide](docs/issue-5-validation.md) to create it first. Tests refuse the application database before running migrations.
+The test script creates a fresh, isolated MySQL container and test database, builds the test image, runs migrations and test fixtures, and removes its temporary stack afterwards. Docker Desktop must be running in Linux-container mode; the normal app stack does not need to be running. No manual database creation or grants are needed. See the [testing guide](docs/testing.md) for filters, cleanup and troubleshooting. Tests still refuse an unsafe database before migrations.
 
 ## Project shape
 
