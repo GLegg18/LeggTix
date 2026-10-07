@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1512" viewBox="0 0 1200 1512" role="img" aria-label="Proposed LeggTix MVP database: users own events, event types classify events, and users book reservations or queue on waitlist entries for events. Each foreign key references one parent; each parent can have zero or more child rows.">
+<title>PROPOSED MVP SCHEMA</title>
+<desc>Proposed LeggTix MVP database: users own events, event types classify events, and users book reservations or queue on waitlist entries for events. Each foreign key references one parent; each parent can have zero or more child rows.</desc>
+<rect x="0" y="0" width="1200" height="1512" fill="#FFFFFF"/>
+<text x="48" y="64" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PROPOSED MVP SCHEMA</text>
+<text x="48" y="92" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">LeggTix | One event owner; all user roles may reserve or join a waitlist.</text>
+<path d="M 432 408 L 432 464 L 480 464 L 480 509" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 480 520 L 475 508 L 485 508 Z" fill="#475569" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<rect x="436" y="428" width="51" height="28" rx="4" fill="#FFFFFF"/>
+<text x="440" y="448" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">owns</text>
+<text x="412" y="428" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">1</text>
+<text x="492" y="508" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">0..*</text>
+<path d="M 888 324 L 888 456 L 720 456 L 720 509" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 720 520 L 715 508 L 725 508 Z" fill="#475569" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<rect x="772" y="420" width="79" height="28" rx="4" fill="#FFFFFF"/>
+<text x="776" y="440" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">classifies</text>
+<text x="900" y="344" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">1</text>
+<text x="732" y="508" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">0..*</text>
+<path d="M 80 284 L 48 284 L 48 1188 L 69 1188" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 80 1188 L 68 1183 L 68 1193 Z" fill="#475569" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<rect x="56" y="728" width="56" height="28" rx="4" fill="#FFFFFF"/>
+<text x="60" y="748" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">books</text>
+<text x="56" y="268" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">1</text>
+<text x="52" y="1172" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">0..*</text>
+<path d="M 312 164 L 312 124 L 1152 124 L 1152 1216 L 1131 1216" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 1120 1216 L 1132 1211 L 1132 1221 Z" fill="#475569" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<rect x="960" y="92" width="67" height="28" rx="4" fill="#FFFFFF"/>
+<text x="964" y="112" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">queues</text>
+<text x="324" y="152" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">1</text>
+<text x="1120" y="1200" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">0..*</text>
+<path d="M 480 960 L 480 1000 L 312 1000 L 312 1041" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 312 1052 L 307 1040 L 317 1040 Z" fill="#475569" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<rect x="372" y="968" width="56" height="28" rx="4" fill="#FFFFFF"/>
+<text x="376" y="988" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">books</text>
+<text x="492" y="980" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">1</text>
+<text x="324" y="1040" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">0..*</text>
+<path d="M 720 960 L 720 984 L 888 984 L 888 1041" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 888 1052 L 883 1040 L 893 1040 Z" fill="#475569" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<rect x="772" y="952" width="67" height="28" rx="4" fill="#FFFFFF"/>
+<text x="776" y="972" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">queues</text>
+<text x="732" y="980" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">1</text>
+<text x="900" y="1040" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">0..*</text>
+<rect x="80" y="164" width="464" height="244" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 80 212 L 544 212" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="96" y="196" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">users</text>
+<text x="96" y="232" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="132" y="232" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="132" y="260" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">name</text>
+<text x="96" y="288" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">UK</text>
+<text x="132" y="288" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">email</text>
+<text x="132" y="316" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">password</text>
+<text x="132" y="344" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">role: regular_user | organiser | admin</text>
+<text x="132" y="372" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">created_at</text>
+<text x="132" y="400" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">updated_at</text>
+<rect x="656" y="164" width="464" height="160" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 656 212 L 1120 212" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="672" y="196" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">event_types</text>
+<text x="672" y="232" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="708" y="232" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="672" y="260" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">UK</text>
+<text x="708" y="260" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">slug</text>
+<text x="708" y="288" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">name</text>
+<text x="708" y="316" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">is_active</text>
+<rect x="360" y="520" width="480" height="440" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 360 568 L 840 568" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="376" y="552" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">events</text>
+<text x="376" y="588" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="412" y="588" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="376" y="616" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="412" y="616" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">owner_id -&gt; users.id</text>
+<text x="376" y="644" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="412" y="644" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">event_type_id -&gt; event_types.id</text>
+<text x="412" y="672" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">name</text>
+<text x="412" y="700" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">description</text>
+<text x="412" y="728" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">venue</text>
+<text x="412" y="756" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">starts_at</text>
+<text x="412" y="784" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">ends_at?</text>
+<text x="412" y="812" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">timezone</text>
+<text x="412" y="840" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">capacity</text>
+<text x="412" y="868" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">confirmed_count: INT UNSIGNED = 0</text>
+<text x="412" y="896" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">status</text>
+<text x="412" y="924" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">created_at</text>
+<text x="412" y="952" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">updated_at</text>
+<rect x="80" y="1052" width="464" height="272" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 80 1100 L 544 1100" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="96" y="1084" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">reservations</text>
+<text x="96" y="1120" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="132" y="1120" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="96" y="1148" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="132" y="1148" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">event_id -&gt; events.id</text>
+<text x="96" y="1176" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="132" y="1176" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">user_id -&gt; users.id</text>
+<text x="132" y="1204" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">status: confirmed | cancelled</text>
+<text x="132" y="1232" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">cancelled_at?</text>
+<text x="132" y="1260" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">active_user_id? (generated)</text>
+<text x="96" y="1288" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">UK</text>
+<text x="132" y="1288" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">(event_id, active_user_id)</text>
+<text x="132" y="1316" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">created_at, updated_at</text>
+<rect x="656" y="1052" width="464" height="328" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 656 1100 L 1120 1100" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="672" y="1084" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">waitlist_entries</text>
+<text x="672" y="1120" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="708" y="1120" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="672" y="1148" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="708" y="1148" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">event_id -&gt; events.id</text>
+<text x="672" y="1176" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="708" y="1176" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">user_id -&gt; users.id</text>
+<text x="708" y="1204" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">status: waiting | promoted | cancelled</text>
+<text x="708" y="1232" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">joined_at</text>
+<text x="708" y="1260" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">promoted_at?</text>
+<text x="708" y="1288" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">cancelled_at?</text>
+<text x="708" y="1316" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">waiting_user_id? (generated)</text>
+<text x="672" y="1344" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">UK</text>
+<text x="708" y="1344" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">(event_id, waiting_user_id)</text>
+<text x="708" y="1372" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">created_at, updated_at</text>
+<text x="48" y="1432" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">PK primary key  |  FK foreign key  |  UK unique key  |  ? nullable</text>
+<text x="48" y="1460" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Every FK row references one parent; each parent has zero or more child rows.</text>
+</svg>

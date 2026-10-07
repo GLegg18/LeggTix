@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1440" viewBox="0 0 1200 1440" role="img" aria-label="Venues contain sections and physical seats. Events optionally reference a venue. Each event has occurrence-specific event seats referencing physical seats. Unique event and physical seat pairs protect inventory identity; current hold and sold order item links connect checkout.">
+<title>PROPOSED EXTENSION: VENUES + ASSIGNED SEATING</title>
+<desc>Venues contain sections and physical seats. Events optionally reference a venue. Each event has occurrence-specific event seats referencing physical seats. Unique event and physical seat pairs protect inventory identity; current hold and sold order item links connect checkout.</desc>
+<rect x="0" y="0" width="1200" height="1440" fill="#FFFFFF"/>
+<text x="48" y="64" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PROPOSED EXTENSION: VENUES + ASSIGNED SEATING</text>
+<text x="48" y="92" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Each event is one occurrence; physical seats persist and inventory belongs to that occurrence.</text>
+<rect x="80" y="164" width="464" height="160" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 80 212 L 544 212" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="96" y="196" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">venues</text>
+<text x="96" y="232" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="132" y="232" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="132" y="260" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">name</text>
+<text x="132" y="288" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">timezone</text>
+<text x="132" y="316" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">capacity_ceiling?</text>
+<rect x="656" y="164" width="464" height="216" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 656 212 L 1120 212" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="672" y="196" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">events (extends MVP)</text>
+<text x="672" y="232" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="708" y="232" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="672" y="260" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="708" y="260" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">owner_id; event_type_id</text>
+<text x="672" y="288" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="708" y="288" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">venue_id?</text>
+<text x="708" y="316" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">capacity</text>
+<text x="708" y="344" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">inventory_mode: GA | assigned</text>
+<text x="708" y="372" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">sales_mode: free | paid</text>
+<rect x="80" y="520" width="464" height="160" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 80 568 L 544 568" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="96" y="552" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">venue_sections</text>
+<text x="96" y="588" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="132" y="588" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="96" y="616" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="132" y="616" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">venue_id</text>
+<text x="132" y="644" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">code</text>
+<text x="96" y="672" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">UK</text>
+<text x="132" y="672" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">(venue_id, code)</text>
+<rect x="80" y="900" width="464" height="160" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 80 948 L 544 948" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="96" y="932" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">venue_seats</text>
+<text x="96" y="968" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="132" y="968" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="96" y="996" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="132" y="996" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">venue_section_id</text>
+<text x="132" y="1024" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">row_label; seat_label</text>
+<text x="96" y="1052" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">UK</text>
+<text x="132" y="1052" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">(venue_section_id, row_label, seat_label)</text>
+<rect x="656" y="860" width="464" height="244" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 656 908 L 1120 908" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="672" y="892" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">event_seats</text>
+<text x="672" y="928" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="708" y="928" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="672" y="956" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="708" y="956" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">event_id; venue_seat_id</text>
+<text x="672" y="984" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">UK</text>
+<text x="708" y="984" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">(event_id, venue_seat_id)</text>
+<text x="708" y="1012" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">status: available | held | sold</text>
+<text x="672" y="1040" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="708" y="1040" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">current_hold_id? -&gt; inventory_holds</text>
+<text x="708" y="1068" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">version</text>
+<text x="672" y="1096" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="708" y="1096" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">current_order_item_id? -&gt; order_items</text>
+<path d="M 312 164 L 312 128 L 888 128 L 888 153" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 888 164 L 883 152 L 893 152 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 312 324 L 312 509" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 312 520 L 307 508 L 317 508 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 312 680 L 312 889" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 312 900 L 307 888 L 317 888 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 888 380 L 888 849" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 888 860 L 883 848 L 893 848 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 312 1060 L 312 1212 L 888 1212 L 888 1115" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 888 1104 L 883 1116 L 893 1116 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<text x="48" y="1292" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">PK primary key | FK foreign key | UK unique key | ? nullable | Key field subsets shown.</text>
+<text x="48" y="1320" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">GA = general_admission; assigned = assigned_seating. Modes remain separate from free/paid.</text>
+<text x="48" y="1348" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Seat allocation locks the event first; current_hold_id + version guard expiry and payment retries.</text>
+<text x="48" y="1376" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Venue changes after sale require a separate policy; do not silently remap sold seat inventory.</text>
+<rect x="396" y="96" width="413" height="28" rx="4" fill="#FFFFFF"/>
+<text x="400" y="116" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">venue_id | event has 0..1 venue; venue has 0..* events</text>
+<rect x="320" y="412" width="216" height="28" rx="4" fill="#FFFFFF"/>
+<text x="324" y="432" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">venue_id | 1 -&gt; 0..* sections</text>
+<rect x="320" y="784" width="256" height="28" rx="4" fill="#FFFFFF"/>
+<text x="324" y="804" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">venue_section_id | 1 -&gt; 0..* seats</text>
+<rect x="700" y="664" width="235" height="28" rx="4" fill="#FFFFFF"/>
+<text x="704" y="684" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">event_id | 1 -&gt; 0..* event seats</text>
+<rect x="348" y="1180" width="488" height="28" rx="4" fill="#FFFFFF"/>
+<text x="352" y="1200" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">venue_seat_id | physical seat 1 -&gt; 0..* occurrence inventory rows</text>
+</svg>

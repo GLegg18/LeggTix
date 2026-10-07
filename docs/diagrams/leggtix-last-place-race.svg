@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1392" viewBox="0 0 1200 1392" role="img" aria-label="With one place left, A locks the event while B waits. A increments confirmed_count and inserts its reservation in one transaction. After A commits, B reads the current full count and does not insert. If A rolls back, its increment and reservation both disappear and B can win.">
+<title>MVP RACE: TWO USERS WANT THE LAST PLACE</title>
+<desc>With one place left, A locks the event while B waits. A increments confirmed_count and inserts its reservation in one transaction. After A commits, B reads the current full count and does not insert. If A rolls back, its increment and reservation both disappear and B can win.</desc>
+<rect x="0" y="0" width="1200" height="1392" fill="#FFFFFF"/>
+<text x="48" y="64" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">MVP RACE: TWO USERS WANT THE LAST PLACE</text>
+<text x="48" y="92" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Proposed transaction sequence | MySQL's event row decides who can reserve.</text>
+<rect x="360" y="140" width="480" height="88" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<text x="376" y="168" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Illustrative starting state: capacity = 1</text>
+<text x="376" y="196" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">confirmed_count = 0; no active reservation</text>
+<text x="80" y="248" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">USER A / TRANSACTION A</text>
+<text x="656" y="248" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">USER B / TRANSACTION B</text>
+<rect x="80" y="272" width="464" height="88" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<text x="96" y="300" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">A requests a reservation</text>
+<text x="96" y="328" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Begin transaction</text>
+<rect x="656" y="272" width="464" height="88" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<text x="672" y="300" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">B requests a reservation</text>
+<text x="672" y="328" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Begin transaction</text>
+<rect x="80" y="408" width="464" height="116" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<text x="96" y="436" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">A locks the event row FOR UPDATE</text>
+<text x="96" y="464" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Recheck published/future + requesting user,</text>
+<text x="96" y="492" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">existing reservation and waitlist priority</text>
+<rect x="656" y="408" width="464" height="116" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<text x="672" y="436" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">B tries the same event row lock</text>
+<text x="672" y="464" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">MySQL makes B wait for A</text>
+<text x="672" y="492" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">B does not decide from an earlier count</text>
+<rect x="80" y="580" width="464" height="116" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<text x="96" y="608" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">A conditionally increments confirmed_count</text>
+<text x="96" y="636" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Guard: confirmed_count &lt; capacity</text>
+<text x="96" y="664" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Insert reservation in the SAME transaction</text>
+<rect x="80" y="752" width="464" height="116" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<text x="96" y="780" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">A commits count = 1 + reservation</text>
+<text x="96" y="808" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Release the event lock</text>
+<text x="96" y="836" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Dispatch side effects after commit</text>
+<rect x="656" y="752" width="464" height="116" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<text x="672" y="780" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">B acquires the event lock</text>
+<text x="672" y="808" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Read CURRENT confirmed_count = 1</text>
+<text x="672" y="836" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Recheck all rules under the lock</text>
+<rect x="656" y="924" width="464" height="116" rx="8" fill="#FFFFFF" stroke="#0F766E" stroke-width="2"/>
+<text x="672" y="952" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">B sees a full event</text>
+<text x="672" y="980" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Do not increment or insert a reservation</text>
+<text x="672" y="1008" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Commit the documented full outcome</text>
+<path d="M 312 360 L 312 397" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 312 408 L 307 396 L 317 396 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 888 360 L 888 397" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 888 408 L 883 396 L 893 396 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 312 524 L 312 569" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 312 580 L 307 568 L 317 568 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 312 696 L 312 741" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 312 752 L 307 740 L 317 740 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 888 524 L 888 741" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 888 752 L 883 740 L 893 740 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 544 800 L 645 800" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 656 800 L 644 795 L 644 805 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 888 868 L 888 913" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 888 924 L 883 912 L 893 912 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<text x="80" y="1060" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">ALTERNATIVE: A FAILS BEFORE COMMIT</text>
+<rect x="80" y="1084" width="464" height="116" rx="8" fill="#FFFFFF" stroke="#0F766E" stroke-width="2"/>
+<text x="96" y="1112" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">MySQL rolls A's transaction back</text>
+<text x="96" y="1140" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Undo the count increment AND inserted row</text>
+<text x="96" y="1168" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Release the event lock; count returns to 0</text>
+<rect x="656" y="1084" width="464" height="116" rx="8" fill="#FFFFFF" stroke="#0F766E" stroke-width="2"/>
+<text x="672" y="1112" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">B acquires the lock and reads count = 0</text>
+<text x="672" y="1140" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">B rechecks rules and can reserve</text>
+<text x="672" y="1168" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">B increments + inserts atomically, then commits</text>
+<path d="M 80 636 L 48 636 L 48 1140 L 69 1140" fill="none" stroke="#0F766E" stroke-width="2" stroke-linecap="round"/>
+<path d="M 80 1140 L 68 1135 L 68 1145 Z" fill="#0F766E" stroke="#0F766E" stroke-width="2"/>
+<path d="M 312 1200 L 312 1248 L 888 1248 L 888 1211" fill="none" stroke="#0F766E" stroke-width="2" stroke-linecap="round"/>
+<path d="M 888 1200 L 883 1212 L 893 1212 Z" fill="#0F766E" stroke="#0F766E" stroke-width="2"/>
+<text x="48" y="1300" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Never use Redis availability or a count-then-insert check as the capacity authority.</text>
+<text x="48" y="1328" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">This diagram explains correctness; hot-event lock wait and throughput require real MySQL tests.</text>
+<rect x="88" y="372" width="95" height="28" rx="4" fill="#FFFFFF"/>
+<text x="92" y="392" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">locks event</text>
+<rect x="664" y="372" width="98" height="28" rx="4" fill="#FFFFFF"/>
+<text x="668" y="392" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">same event</text>
+<rect x="88" y="540" width="103" height="28" rx="4" fill="#FFFFFF"/>
+<text x="92" y="560" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">checks pass</text>
+<rect x="88" y="712" width="158" height="28" rx="4" fill="#FFFFFF"/>
+<text x="92" y="732" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">both writes succeed</text>
+<rect x="896" y="612" width="121" height="28" rx="4" fill="#FFFFFF"/>
+<text x="900" y="632" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">A commits first</text>
+<rect x="516" y="712" width="126" height="28" rx="4" fill="#FFFFFF"/>
+<text x="520" y="732" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">commit unlocks</text>
+<rect x="664" y="888" width="136" height="28" rx="4" fill="#FFFFFF"/>
+<text x="668" y="908" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">fresh count is full</text>
+<rect x="56" y="1020" width="179" height="28" rx="4" fill="#FFFFFF"/>
+<text x="60" y="1040" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">if A fails before commit</text>
+<rect x="396" y="1216" width="329" height="28" rx="4" fill="#FFFFFF"/>
+<text x="400" y="1236" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">rollback unlocks; B reads the restored state</text>
+</svg>

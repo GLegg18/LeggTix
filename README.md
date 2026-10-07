@@ -92,3 +92,7 @@ Controllers should validate requests and coordinate small action/service classes
 ## Current scope
 
 This is the project skeleton only. Authentication, event management, reservations, waitlist promotion, seed data, and feature tests are planned for later milestones.
+
+## Design documentation
+
+The [documentation index](docs/README.md) links the [database design for issue #27](docs/database-design.md), its ER diagram, [two-customer reservation races](docs/reservation-races.md), and the [staged ticketing extension plan](docs/ticketing-extensions.md). The five-table MVP remains the initial schema; venues, seating, teams, overlapping roles and payments have separate future designs and ticket handoffs.

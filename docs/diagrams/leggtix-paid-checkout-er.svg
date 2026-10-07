@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1560" viewBox="0 0 1200 1560" role="img" aria-label="Ticket types classify held inventory. Holds contain inventory hold items and each hold has at most one order. Orders contain copied-price order items and payment attempts; sold items issue at most one ticket. Attempts receive provider events and can have refunds. Outbox messages support durable recovery without becoming the inventory or money authority.">
+<title>PROPOSED EXTENSION: PAID CHECKOUT + TICKET ISSUANCE</title>
+<desc>Ticket types classify held inventory. Holds contain inventory hold items and each hold has at most one order. Orders contain copied-price order items and payment attempts; sold items issue at most one ticket. Attempts receive provider events and can have refunds. Outbox messages support durable recovery without becoming the inventory or money authority.</desc>
+<rect x="0" y="0" width="1200" height="1560" fill="#FFFFFF"/>
+<text x="48" y="64" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PROPOSED EXTENSION: PAID CHECKOUT + TICKET ISSUANCE</text>
+<text x="48" y="92" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">One item = one admission | Inventory holds, provider money state, and admission tickets are distinct.</text>
+<rect x="80" y="176" width="304" height="160" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 80 224 L 384 224" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="96" y="208" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">ticket_types</text>
+<text x="96" y="244" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="132" y="244" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="96" y="272" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="132" y="272" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">event_id</text>
+<text x="132" y="300" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">unit_amount_minor</text>
+<text x="132" y="328" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">currency</text>
+<rect x="448" y="176" width="304" height="160" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 448 224 L 752 224" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="464" y="208" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">inventory_holds</text>
+<text x="464" y="244" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="500" y="244" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="464" y="272" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="500" y="272" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">event_id; user_id</text>
+<text x="500" y="300" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">status; expires_at</text>
+<text x="464" y="328" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">UK</text>
+<text x="500" y="328" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">request_key (scoped)</text>
+<rect x="816" y="176" width="304" height="188" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 816 224 L 1120 224" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="832" y="208" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">orders</text>
+<text x="832" y="244" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="868" y="244" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="832" y="272" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="868" y="272" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">event_id; user_id</text>
+<text x="832" y="300" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="868" y="300" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">hold_id (UNIQUE)</text>
+<text x="868" y="328" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">status; total_minor</text>
+<text x="868" y="356" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">currency; financial_status</text>
+<rect x="80" y="592" width="304" height="188" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 80 640 L 384 640" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="96" y="624" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">tickets</text>
+<text x="96" y="660" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="132" y="660" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="96" y="688" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="132" y="688" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">order_item_id (UNIQUE)</text>
+<text x="96" y="716" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="132" y="716" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">attendee_user_id?</text>
+<text x="96" y="744" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">UK</text>
+<text x="132" y="744" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">credential_hash</text>
+<text x="132" y="772" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">status</text>
+<rect x="448" y="592" width="304" height="160" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 448 640 L 752 640" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="464" y="624" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">inventory_hold_items</text>
+<text x="464" y="660" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="500" y="660" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="464" y="688" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="500" y="688" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">hold_id</text>
+<text x="464" y="716" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="500" y="716" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">ticket_type_id</text>
+<text x="464" y="744" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="500" y="744" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">event_seat_id?</text>
+<rect x="816" y="592" width="304" height="244" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 816 640 L 1120 640" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="832" y="624" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">order_items</text>
+<text x="832" y="660" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="868" y="660" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="832" y="688" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="868" y="688" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">order_id</text>
+<text x="832" y="716" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="868" y="716" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">hold_item_id (UNIQUE)</text>
+<text x="832" y="744" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="868" y="744" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">ticket_type_id</text>
+<text x="832" y="772" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="868" y="772" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">event_seat_id?</text>
+<text x="868" y="800" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">unit_amount_minor</text>
+<text x="868" y="828" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">currency (snapshot)</text>
+<rect x="80" y="1036" width="304" height="188" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 80 1084 L 384 1084" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="96" y="1068" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">refunds</text>
+<text x="96" y="1104" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="132" y="1104" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="96" y="1132" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="132" y="1132" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">payment_attempt_id</text>
+<text x="132" y="1160" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">provider; provider_refund_id?</text>
+<text x="96" y="1188" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">UK</text>
+<text x="132" y="1188" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">provider + idempotency_key</text>
+<text x="132" y="1216" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">amount_minor; status</text>
+<rect x="448" y="1036" width="304" height="160" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 448 1084 L 752 1084" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="464" y="1068" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">payment_provider_events</text>
+<text x="464" y="1104" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="500" y="1104" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="464" y="1132" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="500" y="1132" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">payment_attempt_id?</text>
+<text x="500" y="1160" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">provider; status</text>
+<text x="464" y="1188" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">UK</text>
+<text x="500" y="1188" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">provider + event ID</text>
+<rect x="816" y="1036" width="304" height="188" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 816 1084 L 1120 1084" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="832" y="1068" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">payment_attempts</text>
+<text x="832" y="1104" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="868" y="1104" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="832" y="1132" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="868" y="1132" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">order_id</text>
+<text x="868" y="1160" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">provider_object_id?</text>
+<text x="832" y="1188" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">UK</text>
+<text x="868" y="1188" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">provider + idempotency_key</text>
+<text x="832" y="1216" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">UK</text>
+<text x="868" y="1216" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">open_order_id? (generated)</text>
+<path d="M 600 336 L 600 464 L 968 464 L 968 375" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 968 364 L 963 376 L 973 376 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 600 336 L 600 581" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 600 592 L 595 580 L 605 580 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 232 336 L 232 416 L 520 416 L 520 581" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 520 592 L 515 580 L 525 580 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 80 256 L 48 256 L 48 884 L 1080 884 L 1080 847" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 1080 836 L 1075 848 L 1085 848 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 1064 364 L 1064 581" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 1064 592 L 1059 580 L 1069 580 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 600 752 L 600 936 L 968 936 L 968 847" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 968 836 L 963 848 L 973 848 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 984 592 L 984 572 L 232 572 L 232 581" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 232 592 L 227 580 L 237 580 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 1120 284 L 1152 284 L 1152 980 L 1032 980 L 1032 1025" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 1032 1036 L 1027 1024 L 1037 1024 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 984 1224 L 984 1288 L 232 1288 L 232 1235" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 232 1224 L 227 1236 L 237 1236 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 900 1224 L 900 1328 L 600 1328 L 600 1207" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 600 1196 L 595 1208 L 605 1208 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<rect x="80" y="1320" width="464" height="132" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 80 1368 L 544 1368" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="96" y="1352" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">outbox_messages (recovery)</text>
+<text x="96" y="1388" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="132" y="1388" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="132" y="1416" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">topic; aggregate_id; status</text>
+<text x="96" y="1444" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">UK</text>
+<text x="132" y="1444" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">deduplication_key</text>
+<text x="48" y="1476" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">PK primary | FK foreign | UK unique | ? nullable | External user/event/seat FKs shown as fields.</text>
+<text x="48" y="1504" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Verified provider events drive guarded transitions; no provider calls inside MySQL transactions.</text>
+<rect x="636" y="432" width="287" height="28" rx="4" fill="#FFFFFF"/>
+<text x="640" y="452" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">hold_id UNIQUE | hold 1 -&gt; 0..1 order</text>
+<rect x="460" y="516" width="181" height="28" rx="4" fill="#FFFFFF"/>
+<text x="464" y="536" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">hold_id | 1 -&gt; 0..* items</text>
+<rect x="240" y="384" width="265" height="28" rx="4" fill="#FFFFFF"/>
+<text x="244" y="404" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">ticket_type_id | 1 -&gt; 0..* held items</text>
+<rect x="76" y="852" width="264" height="28" rx="4" fill="#FFFFFF"/>
+<text x="80" y="872" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">ticket_type_id | 1 -&gt; 0..* sold items</text>
+<rect x="852" y="536" width="189" height="28" rx="4" fill="#FFFFFF"/>
+<text x="856" y="556" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">order_id | 1 -&gt; 0..* items</text>
+<rect x="636" y="904" width="319" height="28" rx="4" fill="#FFFFFF"/>
+<text x="640" y="924" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">hold_item_id UNIQUE | 1 -&gt; 0..1 sold item</text>
+<rect x="88" y="540" width="299" height="28" rx="4" fill="#FFFFFF"/>
+<text x="92" y="560" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">order_item_id UNIQUE | 1 -&gt; 0..1 ticket</text>
+<rect x="836" y="988" width="280" height="28" rx="4" fill="#FFFFFF"/>
+<text x="840" y="1008" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">order_id | 1 -&gt; 0..* payment attempts</text>
+<rect x="404" y="1256" width="293" height="28" rx="4" fill="#FFFFFF"/>
+<text x="408" y="1276" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">payment_attempt_id | 1 -&gt; 0..* refunds</text>
+<rect x="672" y="1296" width="409" height="28" rx="4" fill="#FFFFFF"/>
+<text x="676" y="1316" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">payment_attempt_id? | 0..1 attempt per provider event</text>
+</svg>
