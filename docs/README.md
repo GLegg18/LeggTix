@@ -6,9 +6,9 @@ The [ER diagram](diagrams/leggtix-database-er.svg) is a portable visual of the f
 
 The [authentication API guide](authentication.md) documents the implemented registration, login, current-user and logout flow for [issue #5](https://github.com/GLegg18/LeggTix/issues/5), including token expiry, rate limits and the MySQL/SQLite verification boundary.
 
-For hands-on checking after migration, follow the [step-by-step PowerShell test plan](manual-test-plan.md). It checks Docker health, runs PHPUnit with an automatically created test database and walks through registration, login, logout and expected failures. The [testing guide](testing.md) explains the disposable Docker runner and its verification.
+The [testing guide](testing.md) explains the disposable Docker runner, argument forwarding, cleanup and troubleshooting. Follow the [manual acceptance checks](manual-test-plan.md) for copy/paste PowerShell steps and expected responses from the live app.
 
-The [issue #5 verification report](issue-5-validation.md) records the developer, tester and security-reviewer handoffs, executed checks, fixed defects, dedicated test-database setup and manual acceptance plan.
+The [issue #5 verification report](issue-5-validation.md) records executed checks, review findings and verification limits. The guides describe how to repeat the checks; the report records what was verified.
 
 Read [reservation races](reservation-races.md) for two-customer timelines covering the last place, the same named seat, cancellation and retry behaviour. The [ticketing extension plan](ticketing-extensions.md) adds staged diagrams and research for venues, seating, organiser teams, overlapping roles and payments. It links future GitHub tickets separately from the MVP work.
 

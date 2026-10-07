@@ -35,7 +35,7 @@ Open [http://localhost:8000/up](http://localhost:8000/up). Laravel's health endp
 
 Use the [authentication API guide](docs/authentication.md) to register, log in, fetch the current user, and revoke a token. The API returns JSON errors even when a client omits its `Accept` header.
 
-After migrating, follow the [step-by-step PowerShell test plan](docs/manual-test-plan.md) for copy-and-paste checks and the expected result at each step.
+After migrating, use the [testing guide](docs/testing.md) for the isolated Docker runner and the [manual acceptance checks](docs/manual-test-plan.md) for the live app walkthrough and expected results.
 
 To stop the services while keeping the MySQL data, run `docker compose down`.
 
@@ -74,7 +74,7 @@ docker compose exec app php artisan migrate
 ```powershell
 docker compose logs -f app
 docker compose exec app php artisan
-.\scripts\test.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1
 docker compose exec app php artisan migrate:status
 docker compose exec app php artisan sanctum:prune-expired --hours=24
 ```
@@ -105,3 +105,5 @@ The [MVP schema](docs/database-design.md) is implemented with MySQL constraints,
 ## Design documentation
 
 The [documentation index](docs/README.md) links the [database design for issue #27](docs/database-design.md), its ER diagram, [two-customer reservation races](docs/reservation-races.md), and the [staged ticketing extension plan](docs/ticketing-extensions.md). The five-table MVP remains the initial schema; venues, seating, teams, overlapping roles and payments have separate future designs and ticket handoffs.
+
+The [issue #5 verification report](docs/issue-5-validation.md) records the checks performed, review findings and remaining verification limits.
