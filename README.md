@@ -65,4 +65,4 @@ This is the project skeleton only. Authentication, event management, reservation
 
 ## Design documentation
 
-The [documentation index](docs/README.md) links the [database design for issue #27](docs/database-design.md) and its ER diagram. It records the proposed MVP schema, ownership and role decisions, lifecycle constraints, concurrency protocol, and deferred ticketing features before migrations are implemented.
+The [documentation index](docs/README.md) links the [database design for issue #27](docs/database-design.md), its ER diagram, [two-customer reservation races](docs/reservation-races.md), and the [staged ticketing extension plan](docs/ticketing-extensions.md). The five-table MVP remains the initial schema; venues, seating, teams, overlapping roles and payments have separate future designs and ticket handoffs.

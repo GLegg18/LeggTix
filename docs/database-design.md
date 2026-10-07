@@ -6,6 +6,8 @@ Decision date: 6 October 2026. Scope: [issue #27](https://github.com/GLegg18/Leg
 
 Build five domain tables: `users`, `event_types`, `events`, `reservations`, and `waitlist_entries`. Use one role field per user, one owner per event, and one place per reservation. Keep cancelled reservation attempts and previous waitlist attempts as history. Serialize all inventory changes through a locked event row in MySQL, with a guarded occupancy counter to keep the allocation path short during busy sales.
 
+For a concrete two-customer timeline, start with [reservation races: last place and same seat](reservation-races.md). The [staged ticketing extension plan](ticketing-extensions.md) explains how venues, assigned seats, organiser teams, independent roles and paid checkout can fit later while this MVP remains five tables.
+
 This is a proposed implementation contract for the next tickets, not a claim that these tables or protections already exist. The repository currently contains the Laravel skeleton with no domain migrations. Docker Compose selects MySQL 8.4; the design targets InnoDB on that version and the configured Laravel 13 / PHP 8.4 environment.
 
 | Question | MVP decision | Reason |
@@ -54,6 +56,8 @@ The last decision interprets the spec's promotion as a free reservation, with jo
 | `role` | `VARCHAR(20)`, default `regular_user` | Check membership in `regular_user`, `organiser`, `admin`. |
 
 Registration always creates `regular_user`. Role assignment uses trusted seed data or a separately authorised admin operation; registration and profile updates cannot accept role escalation. All roles can reserve/cancel their own places. Only organisers/admins create events; organisers manage only events they own, while admins may manage any event and event type.
+
+The proposed database column is a checked `VARCHAR`, cast to a PHP backed enum, rather than a MySQL `ENUM`. The feature is not implemented yet. Organiser/admin capabilities include the customer capability set: a person who sometimes organises can book someone else's event using the same account and role. Independent global roles and scoped team roles can be introduced later without duplicating user accounts; see [the migration path](ticketing-extensions.md).
 
 Use Laravel's established authentication tooling. Token/password-reset/email-verification/session tables and fields belong to the chosen authentication flow in [#5](https://github.com/GLegg18/LeggTix/issues/5), not a custom credentials model. `email_verified_at` and `remember_token` can be added if that flow uses them. Keep tokens hashed and private using the selected Laravel tooling. No role index is needed for the core queries.
 
@@ -236,6 +240,8 @@ Use Laravel [Policies](https://laravel.com/framework/docs/13.x/authorization) fo
 Admins may manage events/catalogue and view event attendee lists. Individual reservation cancellation stays holder-only; an admin cancelling an event uses the event-wide cancellation workflow. Restrict attendee/waitlist list access to current owner with organiser privileges or admin, scope nested reservation IDs to the event, paginate lists, and return only deliberate API fields. Generated keys, credentials, tokens, and unrelated users' contact data are private. If an organiser is later demoted, existing event rows remain valid and admin management is required; no role-management API is added by this design ticket.
 
 ## Broader ticketing model: add only with a real feature
+
+The [extension plan and phased ER diagrams](ticketing-extensions.md) expand the proposals below into fields, constraints, state transitions, migration steps and follow-on GitHub tickets. They are separate future stages; their tables are not part of the five-table MVP migration contract.
 
 Ticketmaster's public [Discovery API](https://developer.ticketmaster.com/products-and-docs/apis/discovery/v2/) distinguishes events, venues, attractions and classifications. That is useful domain vocabulary, not access to its internal database or a reason to reproduce its whole model. Our scope selects the smallest subset that demonstrates authorization, history and concurrent allocation.
 

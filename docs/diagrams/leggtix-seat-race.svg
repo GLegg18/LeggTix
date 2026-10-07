@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1420" viewBox="0 0 1200 1420" role="img" aria-label="A and B want the same event seat. A locks the event and seat, creates a current hold and commits. B waits, then reads the held seat and cannot claim it. Expiry and verified payment finalisation must use the same lock and current-hold token/version guards.">
+<title>FUTURE RACE: TWO USERS WANT THE SAME SEAT</title>
+<desc>A and B want the same event seat. A locks the event and seat, creates a current hold and commits. B waits, then reads the held seat and cannot claim it. Expiry and verified payment finalisation must use the same lock and current-hold token/version guards.</desc>
+<rect x="0" y="0" width="1200" height="1420" fill="#FFFFFF"/>
+<text x="48" y="64" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FUTURE RACE: TWO USERS WANT THE SAME SEAT</text>
+<text x="48" y="92" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Proposed extension | Event lock first, then persistent seat rows in ascending ID order.</text>
+<rect x="360" y="140" width="480" height="88" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<text x="376" y="168" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Illustrative seat #42: available</text>
+<text x="376" y="196" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">UNIQUE(event_id, venue_seat_id) row exists</text>
+<text x="80" y="248" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">USER A / TRANSACTION A</text>
+<text x="656" y="248" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">USER B / TRANSACTION B</text>
+<rect x="80" y="272" width="464" height="88" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<text x="96" y="300" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">A requests seat #42</text>
+<text x="96" y="328" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Begin transaction</text>
+<rect x="656" y="272" width="464" height="88" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<text x="672" y="300" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">B requests seat #42</text>
+<text x="672" y="328" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Begin transaction</text>
+<rect x="80" y="408" width="464" height="116" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<text x="96" y="436" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">A locks event, then seat #42 FOR UPDATE</text>
+<text x="96" y="464" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Recheck event rules and current availability</text>
+<text x="96" y="492" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">For a group: lock sorted seats, all or nothing</text>
+<rect x="656" y="408" width="464" height="116" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<text x="672" y="436" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">B waits at the same event gate</text>
+<text x="672" y="464" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">B cannot bypass the seat-row lock</text>
+<text x="672" y="492" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">An earlier availability response gives no claim</text>
+<rect x="80" y="580" width="464" height="116" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<text x="96" y="608" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">A changes available -&gt; held</text>
+<text x="96" y="636" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Set current_hold_id = H_A; increment version</text>
+<text x="96" y="664" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Hold records its configured expiry</text>
+<rect x="80" y="752" width="464" height="116" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<text x="96" y="780" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">A commits the hold and seat transition</text>
+<text x="96" y="808" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Release locks; make provider calls outside txn</text>
+<text x="96" y="836" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Retries use the same request/hold identity</text>
+<rect x="656" y="752" width="464" height="116" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<text x="672" y="780" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">B locks event, then seat #42</text>
+<text x="672" y="808" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Read CURRENT state: held by H_A</text>
+<text x="672" y="836" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">A's live hold prevents B taking this seat</text>
+<rect x="656" y="924" width="464" height="116" rx="8" fill="#FFFFFF" stroke="#0F766E" stroke-width="2"/>
+<text x="672" y="952" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">B commits the unavailable outcome</text>
+<text x="672" y="980" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">B may choose a different available seat</text>
+<text x="672" y="1008" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">No second hold can own seat #42</text>
+<path d="M 312 360 L 312 397" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 312 408 L 307 396 L 317 396 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 888 360 L 888 397" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 888 408 L 883 396 L 893 396 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 312 524 L 312 569" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 312 580 L 307 568 L 317 568 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 312 696 L 312 741" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 312 752 L 307 740 L 317 740 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 888 524 L 888 741" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 888 752 L 883 740 L 893 740 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 544 800 L 645 800" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 656 800 L 644 795 L 644 805 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 888 868 L 888 913" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 888 924 L 883 912 L 893 912 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<text x="80" y="1060" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">LATER TRANSITIONS KEEP THE SAME OWNERSHIP GUARD</text>
+<rect x="80" y="1084" width="464" height="172" rx="8" fill="#FFFFFF" stroke="#0F766E" stroke-width="2"/>
+<text x="96" y="1112" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">Expiry / cancellation</text>
+<text x="96" y="1140" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Expiry worker locks event + seat</text>
+<text x="96" y="1168" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Release only if hold ID AND version still match</text>
+<text x="96" y="1196" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">and that current hold is expired</text>
+<text x="96" y="1224" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">A stale expiry job cannot release B's new hold</text>
+<rect x="656" y="1084" width="464" height="172" rx="8" fill="#FFFFFF" stroke="#0F766E" stroke-width="2"/>
+<text x="672" y="1112" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">Payment finalisation</text>
+<text x="672" y="1140" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Verified provider event triggers finalisation</text>
+<text x="672" y="1168" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Lock event + seat; check CURRENT hold token</text>
+<text x="672" y="1196" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">If eligible, held -&gt; sold for this order item</text>
+<text x="672" y="1224" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">A late paid A cannot take B's seat: refund/review</text>
+<text x="48" y="1312" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Initial extension retains the event gate: different-seat throughput is a later measured redesign.</text>
+<text x="48" y="1340" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">No hold duration, payment provider, or throughput target is fixed by this research diagram.</text>
+<rect x="88" y="372" width="110" height="28" rx="4" fill="#FFFFFF"/>
+<text x="92" y="392" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">locks in order</text>
+<rect x="664" y="372" width="148" height="28" rx="4" fill="#FFFFFF"/>
+<text x="668" y="392" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">same event + seat</text>
+<rect x="88" y="540" width="112" height="28" rx="4" fill="#FFFFFF"/>
+<text x="92" y="560" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">available now</text>
+<rect x="88" y="712" width="160" height="28" rx="4" fill="#FFFFFF"/>
+<text x="92" y="732" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">hold + seat succeed</text>
+<rect x="896" y="612" width="121" height="28" rx="4" fill="#FFFFFF"/>
+<text x="900" y="632" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">A commits first</text>
+<rect x="516" y="712" width="126" height="28" rx="4" fill="#FFFFFF"/>
+<text x="520" y="732" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">commit unlocks</text>
+<rect x="664" y="888" width="145" height="28" rx="4" fill="#FFFFFF"/>
+<text x="668" y="908" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">current hold is live</text>
+</svg>

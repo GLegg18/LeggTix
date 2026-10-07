@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1560" viewBox="0 0 1200 1560" role="img" aria-label="Users own events and create teams. Team memberships connect users to teams; event team grants connect teams to individual event capabilities. An optional later roles and user_roles pair replaces users.role after backfill; it permits customer and organiser roles together.">
+<title>PROPOSED EXTENSION: TEAMS + MULTIPLE USER ROLES</title>
+<desc>Users own events and create teams. Team memberships connect users to teams; event team grants connect teams to individual event capabilities. An optional later roles and user_roles pair replaces users.role after backfill; it permits customer and organiser roles together.</desc>
+<rect x="0" y="0" width="1200" height="1560" fill="#FFFFFF"/>
+<text x="48" y="64" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PROPOSED EXTENSION: TEAMS + MULTIPLE USER ROLES</text>
+<text x="48" y="92" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Customer abilities stay shared; event access comes from ownership or scoped team grants.</text>
+<rect x="80" y="164" width="464" height="104" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 80 212 L 544 212" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="96" y="196" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">users (MVP)</text>
+<text x="96" y="232" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="132" y="232" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="132" y="260" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">role (current single-role field)</text>
+<rect x="656" y="164" width="464" height="132" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 656 212 L 1120 212" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="672" y="196" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">teams</text>
+<text x="672" y="232" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="708" y="232" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="708" y="260" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">name</text>
+<text x="672" y="288" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="708" y="288" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">created_by -&gt; users.id</text>
+<rect x="360" y="440" width="480" height="132" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 360 488 L 840 488" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="376" y="472" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">team_memberships</text>
+<text x="376" y="508" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="412" y="508" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">(team_id, user_id)</text>
+<text x="376" y="536" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="412" y="536" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">team_id; user_id</text>
+<text x="412" y="564" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">team_role: manager | member</text>
+<rect x="80" y="764" width="464" height="104" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 80 812 L 544 812" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="96" y="796" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">events (MVP)</text>
+<text x="96" y="832" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="132" y="832" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="96" y="860" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="132" y="860" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">owner_id -&gt; users.id</text>
+<rect x="656" y="764" width="464" height="188" rx="8" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+<path d="M 656 812 L 1120 812" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+<text x="672" y="796" fill="#1D4ED8" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">event_team_grants</text>
+<text x="672" y="832" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="708" y="832" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="672" y="860" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="708" y="860" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">event_id; team_id</text>
+<text x="708" y="888" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">capability: edit_event | view_attendees</text>
+<text x="708" y="916" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">or check_in (one capability per row)</text>
+<text x="672" y="944" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">UK</text>
+<text x="708" y="944" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">(event_id, team_id, capability)</text>
+<path d="M 312 164 L 312 128 L 888 128 L 888 153" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 888 164 L 883 152 L 893 152 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 432 268 L 432 360 L 480 360 L 480 429" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 480 440 L 475 428 L 485 428 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 888 296 L 888 388 L 720 388 L 720 429" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 720 440 L 715 428 L 725 428 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 80 216 L 48 216 L 48 816 L 69 816" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 80 816 L 68 811 L 68 821 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 1040 296 L 1040 753" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 1040 764 L 1035 752 L 1045 752 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 312 868 L 312 1028 L 888 1028 L 888 963" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<path d="M 888 952 L 883 964 L 893 964 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<text x="80" y="1112" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">OPTIONAL LATER ROLE REPLACEMENT (dashed)</text>
+<rect x="80" y="1140" width="464" height="104" rx="8" fill="#FFFFFF" stroke="#475569" stroke-width="2" stroke-dasharray="6 4"/>
+<path d="M 80 1188 L 544 1188" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<text x="96" y="1172" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">roles</text>
+<text x="96" y="1208" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="132" y="1208" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">id</text>
+<text x="96" y="1236" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">UK</text>
+<text x="132" y="1236" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">slug</text>
+<rect x="656" y="1140" width="464" height="132" rx="8" fill="#FFFFFF" stroke="#475569" stroke-width="2" stroke-dasharray="6 4"/>
+<path d="M 656 1188 L 1120 1188" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+<text x="672" y="1172" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">user_roles</text>
+<text x="672" y="1208" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">PK</text>
+<text x="708" y="1208" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">(user_id, role_id)</text>
+<text x="672" y="1236" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="708" y="1236" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">user_id; role_id</text>
+<text x="672" y="1264" fill="#0F766E" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="700">FK</text>
+<text x="708" y="1264" fill="#0F172A" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">assigned_by? -&gt; users.id</text>
+<path d="M 312 1244 L 312 1312 L 832 1312 L 832 1283" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-dasharray="6 4"/>
+<path d="M 832 1272 L 827 1284 L 837 1284 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<path d="M 208 268 L 208 324 L 1152 324 L 1152 1356 L 992 1356 L 992 1283" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-dasharray="6 4"/>
+<path d="M 992 1272 L 987 1284 L 997 1284 Z" fill="#475569" stroke="#475569" stroke-width="2"/>
+<text x="48" y="1416" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">PK primary key | FK foreign key | UK unique key | ? nullable | Key field subsets shown.</text>
+<text x="48" y="1444" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Team membership alone grants no event rights; membership + the specific event grant authorize access.</text>
+<text x="48" y="1472" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">Owner/admin controls event grants. Optional user_roles replaces users.role after a deliberate backfill.</text>
+<text x="48" y="1500" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">assigned_by is an optional audit FK to users; audit link omitted from relationship lines for readability.</text>
+<rect x="440" y="96" width="311" height="28" rx="4" fill="#FFFFFF"/>
+<text x="444" y="116" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">created_by | user 1 -&gt; 0..* created teams</text>
+<rect x="80" y="328" width="278" height="28" rx="4" fill="#FFFFFF"/>
+<text x="84" y="348" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">user_id | user 1 -&gt; 0..* memberships</text>
+<rect x="768" y="356" width="287" height="28" rx="4" fill="#FFFFFF"/>
+<text x="772" y="376" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">team_id | team 1 -&gt; 0..* memberships</text>
+<rect x="56" y="684" width="294" height="28" rx="4" fill="#FFFFFF"/>
+<text x="60" y="704" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">owner_id | user 1 -&gt; 0..* owned events</text>
+<rect x="768" y="640" width="279" height="28" rx="4" fill="#FFFFFF"/>
+<text x="772" y="660" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">team_id | team 1 -&gt; 0..* event grants</text>
+<rect x="404" y="996" width="283" height="28" rx="4" fill="#FFFFFF"/>
+<text x="408" y="1016" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">event_id | event 1 -&gt; 0..* team grants</text>
+<rect x="412" y="1280" width="299" height="28" rx="4" fill="#FFFFFF"/>
+<text x="416" y="1300" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">role_id | role 1 -&gt; 0..* user assignments</text>
+<rect x="756" y="1324" width="304" height="28" rx="4" fill="#FFFFFF"/>
+<text x="760" y="1344" fill="#475569" font-family="Helvetica, Arial, 'Liberation Sans', sans-serif" font-size="16" font-weight="400">user_id | user 1 -&gt; 0..* role assignments</text>
+</svg>
