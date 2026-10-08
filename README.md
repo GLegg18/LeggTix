@@ -1,6 +1,6 @@
 # LeggTix
 
-LeggTix is an API-first event reservation and waitlist service. The backend is a Laravel modular monolith with registration, bearer-token authentication, and the five-table MVP schema. Event and reservation workflows are the next milestones.
+LeggTix is an API-first event reservation and waitlist service. The backend is a Laravel modular monolith with registration, bearer-token authentication, the five-table MVP schema, and event models and factories. Event management and reservation workflows are the next milestones.
 
 ## Stack
 
@@ -100,7 +100,7 @@ Controllers should validate requests and coordinate small action/service classes
 
 Registration creates only `regular_user` accounts. Login issues a Laravel Sanctum token that expires after 24 hours; logout revokes the current token. The [authentication guide](docs/authentication.md) documents validation, response contracts, token handling, and rate limits.
 
-The [MVP schema](docs/database-design.md) is implemented with MySQL constraints, generated active uniqueness keys, restricted foreign keys, and UTC `DATETIME(6)` domain timestamps. Its row constraints do not implement booking capacity allocation or cross-table reservation/waitlist rules. Event management, reservation and waitlist actions, their policies and locking protocol, domain seed data, password reset, and email verification remain follow-on work. There are no domain endpoints yet.
+The [MVP schema](docs/database-design.md) is implemented with MySQL constraints, generated active uniqueness keys, restricted foreign keys, and UTC `DATETIME(6)` domain timestamps. [Event models and factories](docs/events.md) provide ownership/type relationships, typed lifecycle statuses, scheduling and fixture states for issue #6. Its row constraints and read helpers do not implement booking capacity allocation or cross-table reservation/waitlist rules. Event management, reservation and waitlist actions, their policies and locking protocol, domain seed data, password reset, and email verification remain follow-on work. There are no domain endpoints yet.
 
 ## Design documentation
 

@@ -6,6 +6,8 @@ The [ER diagram](diagrams/leggtix-database-er.svg) is a portable visual of the f
 
 The [authentication API guide](authentication.md) documents the implemented registration, login, current-user and logout flow for [issue #5](https://github.com/GLegg18/LeggTix/issues/5), including token expiry, rate limits and the MySQL/SQLite verification boundary.
 
+The [event model guide](events.md) documents the models, relationships, protected fields, UTC scheduling, lifecycle read helpers and factory states for [issue #6](https://github.com/GLegg18/LeggTix/issues/6). The tester's [event manual plan](event-manual-test-plan.md) supplies console checks and expected outcomes. The [issue #6 verification report](issue-6-validation.md) records the checks and review outcomes for that model layer.
+
 The [testing guide](testing.md) explains the disposable Docker runner, argument forwarding, cleanup and troubleshooting. Follow the [manual acceptance checks](manual-test-plan.md) for copy/paste PowerShell steps and expected responses from the live app.
 
 The [issue #5 verification report](issue-5-validation.md) records executed checks, review findings and verification limits. The guides describe how to repeat the checks; the report records what was verified.
@@ -22,4 +24,4 @@ Read [reservation races](reservation-races.md) for two-customer timelines coveri
 
 The future backlog is [#28](https://github.com/GLegg18/LeggTix/issues/28) through [#35](https://github.com/GLegg18/LeggTix/issues/35), with dependencies and activation decisions in the extension plan. Existing MVP race verification remains [#12](https://github.com/GLegg18/LeggTix/issues/12).
 
-The five domain migrations and authentication are implemented. Event, reservation and waitlist workflows, their ownership policies and the documented concurrency protocol remain downstream work; the extension diagrams describe future scope.
+The five domain migrations, authentication, and event models/factories are implemented. Event management, reservation and waitlist workflows, their ownership policies and the documented concurrency protocol remain downstream work; the extension diagrams describe future scope.

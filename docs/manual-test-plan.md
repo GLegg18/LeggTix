@@ -47,11 +47,11 @@ docker compose exec app php artisan migrate:status
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1
 ```
 
-**Expected:** **106 passed** and **622 assertions**. The runtime will vary by machine.
+**Expected:** all tests pass. The [issue #6 verification report](issue-6-validation.md) records the latest suite size and results; runtime varies by machine.
 
 The script makes a fresh test database, runs migrations and creates the test fixtures, then removes its temporary containers and database. No manual database creation, root password or `.env` change is needed. The execution-policy override applies only to this PowerShell process. The first run downloads and builds dependencies; the build output is normal.
 
-These tests cover authentication, validation, privileges, token expiry, database checks, duplicate active entries, retained history, foreign keys and migration rollback/rerun.
+These tests cover authentication, validation, privileges, token expiry, database checks, duplicate active entries, retained history, foreign keys, migration rollback/rerun, and event models/factories. The [event guide](events.md) gives the additional model checks and expected outcomes.
 
 If any test fails, stop here and keep the failure text. See the troubleshooting table at the end.
 
@@ -271,7 +271,7 @@ This stops the services and keeps the database data. Leave the containers runnin
 ## What a complete pass means
 
 - Three running containers; app health `200`; Redis `PONG`; six migrations `Ran`.
-- Automated suite: 106 tests and 622 assertions passed.
+- Automated suite: all tests passed; use the latest verification report for the recorded test and assertion counts.
 - Register `201`; current user/login `200`; logout `204`.
 - Guest/old token `401`; invalid input/privilege attempt `422`; excessive attempts `429`.
 - Logging out one token leaves the other token usable.

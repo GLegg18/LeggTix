@@ -6,7 +6,7 @@ Start Docker Desktop in Linux-container mode. In PowerShell at the repository ro
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1
 ```
 
-Expected for the current suite: **106 passed (622 assertions)**, followed by removal of the temporary test stack. The first build needs network access to download images and Composer dependencies. PHP, Composer and MySQL do not need to be installed on Windows. The normal development stack can be running or stopped.
+Expected: all tests pass, followed by removal of the temporary test stack. The [issue #6 verification report](issue-6-validation.md) records the latest executed suite and its runtime. The first build needs network access to download images and Composer dependencies. PHP, Composer and MySQL do not need to be installed on Windows. The normal development stack can be running or stopped.
 
 The execution-policy override applies only to this PowerShell process. If your policy already permits local scripts, `.\scripts\test.ps1` can be run directly.
 
@@ -17,6 +17,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1 --filter=
 ```
 
 Arguments after the script name are forwarded to Laravel's test command. Each invocation still uses a fresh, isolated test database.
+
+To exercise the event model and factory acceptance cases with warnings treated as failures:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1 --filter=EventModelTest --display-warnings --fail-on-warning
+```
 
 ## What happens automatically
 
@@ -60,5 +66,7 @@ The normal app container inherits `DB_DATABASE=leggtix`, which PHPUnit intention
 The [manual acceptance checks](manual-test-plan.md) cover the running app, Redis, authentication, invalid requests and rate limits with copy/paste PowerShell commands. Live requests create demo accounts in the normal local database; the automated runner's fixtures are disposable.
 
 The [issue #5 verification report](issue-5-validation.md) records completed automated/manual checks, review findings, exercised cleanup paths and limits, including behavior that has not been tested.
+
+The [issue #6 verification report](issue-6-validation.md) records event model/factory verification and the developer, tester and security review outcomes. The [event guide](events.md) explains the model contracts and relevant manual checks.
 
 The runner does not add booking workflows, domain seeds, browser tests or capacity-race coverage. Those remain downstream work; the [database design](database-design.md) records the required locking and concurrency checks.
