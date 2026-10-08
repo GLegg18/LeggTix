@@ -102,9 +102,6 @@ class ReservationConcurrencyTest extends TestCase
     {
         $event = Event::factory()->published()->create(['capacity' => 1]);
         $actor = User::factory()->create();
-        DB::table('events')->where('id', $event->id)->update([
-            'starts_at' => DB::raw('DATE_ADD(UTC_TIMESTAMP(6), INTERVAL 3 SECOND)'),
-        ]);
         DB::beginTransaction();
         Event::whereKey($event->id)->lockForUpdate()->firstOrFail();
         [$worker, $barrier] = $this->worker($event, $actor, 'normal');
@@ -113,6 +110,11 @@ class ReservationConcurrencyTest extends TestCase
         file_put_contents($barrier.'/go', 'go');
         $this->assertWaitingOnEventLock($ready['connection_id'], $worker);
 
+        // Establish the cutoff only after startup and the lock wait. A timestamp
+        // sampled before acquiring that lock would now incorrectly allow booking.
+        DB::table('events')->where('id', $event->id)->update([
+            'starts_at' => DB::raw('DATE_ADD(UTC_TIMESTAMP(6), INTERVAL 1 SECOND)'),
+        ]);
         $deadline = microtime(true) + 5;
 
         while (DB::selectOne('SELECT starts_at <= UTC_TIMESTAMP(6) AS started FROM events WHERE id = ?', [$event->id])->started != 1) {

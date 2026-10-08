@@ -53,7 +53,7 @@ class ApiSpecification
 
         $login = &$specification['paths']['/login']['post'];
         $login['summary'] = 'Login and obtain a bearer token';
-        $login['description'] = 'Copy access_token from the response into Authorize. Email is trimmed and lowercased. Invalid credentials return 422. Limits: 30 requests per minute per IP and 5 per normalized email/IP pair.';
+        $login['description'] = 'Copy access_token from the response into Authorize. Email is trimmed and lowercased. Invalid credentials return 422. Limits: 30 requests per minute per IP and 5 per account/IP pair. Equivalent email spellings resolving to the same account share that budget; unknown addresses use a normalized email/IP budget.';
         $login['requestBody']['content']['application/json']['example'] = [
             'email' => 'demo.user@example.test', 'password' => 'demo-password',
         ];

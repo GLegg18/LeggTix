@@ -54,6 +54,22 @@ class ReservationBookingTest extends TestCase
         return ['customer' => ['regular_user'], 'organiser' => ['organiser'], 'admin' => ['admin']];
     }
 
+    public function test_returned_reservations_event_observes_the_updated_counter_and_timestamp(): void
+    {
+        $event = Event::factory()->published()->create(['capacity' => 2]);
+        DB::table('events')->where('id', $event->id)->update(['updated_at' => '2020-01-01 00:00:00']);
+        $beforeBooking = $event->fresh();
+
+        $reservation = app(ReserveEventAction::class)->execute(User::factory()->create(), $event->id);
+
+        $persisted = $event->fresh();
+        $this->assertSame(1, $reservation->event->confirmed_count);
+        $this->assertSame($persisted->confirmed_count, $reservation->event->confirmed_count);
+        $this->assertTrue($reservation->event->updated_at->equalTo($persisted->updated_at));
+        $this->assertTrue($reservation->event->updated_at->greaterThan($beforeBooking->updated_at));
+        $this->assertSame(1, $event->reservations()->where('status', 'confirmed')->count());
+    }
+
     public function test_full_event_refuses_another_actor_without_counter_drift_or_implicit_waitlist(): void
     {
         $event = Event::factory()->published()->create(['capacity' => 1]);

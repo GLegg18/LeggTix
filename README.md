@@ -7,6 +7,7 @@ LeggTix is an API-first event reservation and waitlist service. The backend is a
 - PHP 8.4 and Laravel 13
 - MySQL 8 for application data
 - Redis for cache and queue connections
+- PHP Redis extension pinned to 6.3.0 in the Dockerfile
 - Docker Compose for the local services
 - PHPUnit for the Laravel test runner
 
@@ -60,6 +61,8 @@ Use the login operation to obtain a token, then click **Authorize** and paste th
 The [authentication guide](docs/authentication.md) and [booking guide](docs/reservations.md) retain implementation notes and reproducible checks. The API returns JSON errors even when a client omits its `Accept` header.
 
 After migrating, use the [testing guide](docs/testing.md) for the isolated Docker runner and the [manual acceptance checks](docs/manual-test-plan.md) for the live app walkthrough and expected results.
+
+The [Tests workflow](.github/workflows/tests.yml) runs MySQL acceptance on Linux and test-runner regressions under both Windows PowerShell and PowerShell 7 on pushes and pull requests. The [testing guide](docs/testing.md#continuous-integration) explains hosted checks and configuring required statuses.
 
 To stop the services while keeping the MySQL data, run `docker compose down`.
 

@@ -41,7 +41,7 @@ Validation errors and invalid login credentials return Laravel's `422` JSON shap
 - Registration and login both trim/lowercase email before validation and lookup. The model normalizes email on write too. A unique database index is the final duplicate-account guard.
 - Registration requires matching password confirmation and at least eight characters. Passwords are at most 72 **bytes** and cannot contain null bytes, on registration and login. The byte limit prevents bcrypt from treating different long passwords as the same secret; multibyte characters can use several bytes each. Passwords are not trimmed.
 - Registration always creates `regular_user`. Supplying a nonempty `role` is rejected; other unexpected fields cannot assign IDs, hashes, timestamps or privileges. `role` is excluded from model mass assignment and cast to `UserRole`.
-- Trusted factories can create `organiser` and `admin` users for tests. No public role-management operation, organiser/admin seed account, password-reset endpoint, or email-verification flow is introduced here.
+- Trusted factories can create `organiser` and `admin` users for tests. The local/testing demo seeder creates a regular user and an organiser, as described in the [demo setup](../README.md#demo-data-and-login); it creates no admin or access token. Public role management, password reset and email verification remain separate work.
 
 ## Token lifecycle
 
@@ -59,7 +59,7 @@ docker compose exec app php artisan sanctum:prune-expired --hours=24
 
 ## Rate limits
 
-Registration allows 10 requests per minute per IP. Login allows 30 requests per minute per IP and five per minute for each normalized email/IP combination. Limits count successful and unsuccessful requests. The identity cache key is hashed, and uses the same normalization as credential lookup. The configured cache store supplies shared counters; Compose uses Redis. Test suites use the array store.
+Registration allows 10 requests per minute per IP. Login allows 30 requests per minute per IP and five per minute for each account/IP combination. Limits count successful and unsuccessful requests. Known accounts are resolved through the same MySQL email lookup used for authentication, and the identity budget uses their account ID. This preserves the current accent-insensitive database matching: equivalent spellings cannot create separate budgets. Unknown email identities use a separate hashed, trimmed/lowercased key. The configured cache store supplies shared counters; Compose uses Redis. Test suites use the array store. Account-wide abuse controls across different IPs remain public-launch hardening work.
 
 ## PowerShell example
 
@@ -90,4 +90,4 @@ The migrations implement the five domain tables from [issue #27's design](databa
 
 Laravel's schema builder has no native CHECK helper, so migrations add those checks with MySQL `ALTER TABLE` statements. The application's SQLite connection remains configured, but these migrations do **not** add the checks on SQLite. SQLite results cannot establish the intended constraint, type or locking behavior. The committed PHPUnit suite requires MySQL and refuses databases whose names do not end in `_test` before its migration lifecycle begins. Run `.\scripts\test.ps1` from the repository root to create, use and clean up isolated MySQL 8.4 automatically; see the [testing guide](testing.md). The tests migrate and create their own fixture data, without needing domain seeds.
 
-These tables alone do not prove `confirmed_count` equals confirmed child rows, prevent a user holding both an active reservation and waiting entry, or allocate only published future events. The event-locked actions and concurrency tests in subsequent tickets must enforce those rules before any booking endpoint is exposed.
+These tables alone do not prove `confirmed_count` equals confirmed child rows, prevent a user holding both an active reservation and waiting entry, or allocate only published future events. The implemented [booking action and MySQL race tests](reservations.md) enforce those rules for reservation creation. Cancellation, waitlist and future inventory writers must preserve the same event-first protocol; their workflows remain separate tickets.

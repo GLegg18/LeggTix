@@ -72,6 +72,9 @@ class ReserveEventAction
                 throw new RuntimeException('The reservation could not be saved.');
             }
 
+            // The guarded counter update bypassed the event model associated above.
+            $reservation->unsetRelation('event');
+
             return $reservation;
         }, attempts: 3);
     }

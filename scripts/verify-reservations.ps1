@@ -53,6 +53,27 @@ function Invoke-Issue9Http {
     }
 }
 
+function Invoke-Issue9Login {
+    param([string] $Email, [int] $Expected)
+    $taskLoginRequest = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::Post, 'http://localhost:8000/api/login')
+    $taskLoginResponse = $null
+    try {
+        $taskLoginBody = @{ email = $Email; password = 'wrong-password-for-review' } | ConvertTo-Json -Compress
+        $taskLoginRequest.Content = [System.Net.Http.StringContent]::new($taskLoginBody, [System.Text.Encoding]::UTF8, 'application/json')
+        $taskLoginResponse = $taskClient.SendAsync($taskLoginRequest).GetAwaiter().GetResult()
+        Assert-Issue9 ([int]$taskLoginResponse.StatusCode -eq $Expected) "Login regression expected HTTP$Expected. Response bodies and bearer tokens are omitted from logs."
+        if ($Expected -eq 429) {
+            Assert-Issue9 ($null -ne $taskLoginResponse.Headers.RetryAfter) 'Login rate limiting must return Retry-After.'
+        } else {
+            $taskLoginJson = $taskLoginResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult() | ConvertFrom-Json
+            Assert-Issue9 ($taskLoginJson.errors.email.Count -gt 0) 'Incorrect credentials must return an email validation error.'
+        }
+    } finally {
+        if ($null -ne $taskLoginResponse) { $taskLoginResponse.Dispose() }
+        $taskLoginRequest.Dispose()
+    }
+}
+
 Push-Location $taskRoot
 try {
     Add-Type -AssemblyName System.Net.Http
@@ -73,6 +94,17 @@ try {
     } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $taskRecoveryFile -Encoding UTF8
     Write-Host "Local runtime PHP$($taskFixture.versions.php) MySQL$($taskFixture.versions.mysql) cache=$($taskFixture.versions.cache)"
     $taskAvailable = [string]$taskFixture.events.available
+
+    $taskActorEmail = "issue9.actor.$($taskFixture.tag)@example.test"
+    # Keep the script ASCII-compatible with Windows PowerShell's file decoding.
+    $taskActorAlias = 'issue9.{0}ctor.{1}@example.test' -f [char]0x00E1, $taskFixture.tag
+    foreach ($taskLoginEmail in @($taskActorEmail, $taskActorAlias, $taskActorEmail.ToUpperInvariant(), "  $taskActorAlias  ", $taskActorAlias)) {
+        Invoke-Issue9Login -Email $taskLoginEmail -Expected 422
+    }
+    Invoke-Issue9Login -Email $taskActorEmail -Expected 429
+    Invoke-Issue9Login -Email $taskActorAlias -Expected 429
+    Invoke-Issue9Login -Email "issue9.other.$($taskFixture.tag)@example.test" -Expected 422
+    Write-Host 'PASS Redis-login-throttle: equivalent MySQL spellings share five attempts; another account remains independent.'
 
     $null = Invoke-Issue9Http -Label guest -EventId $taskAvailable -Expected 401
     $null = Invoke-Issue9Http -Label invalid-token -EventId $taskAvailable -Expected 401 -Token 'invalid-token'

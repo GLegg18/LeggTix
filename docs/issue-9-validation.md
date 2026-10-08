@@ -2,6 +2,8 @@
 
 Work performed on 8 October 2026 for [concurrency-safe event reservations #9](https://github.com/GLegg18/LeggTix/issues/9), using the developer, tester and security reviewer roles. A read-only documentation explorer inspected all 17 existing repository Markdown files, including the local project spec and rationale, before implementation. The [booking guide](reservations.md) documents the final contract; the [manual plan](reservation-manual-test-plan.md) gives repeatable checks and expected outcomes.
 
+The sections below retain the earlier milestone's execution history. The latest review fixes, verification and remaining acceptance work are recorded in the repository-review follow-up at the end of this report.
+
 ## Changes and scope
 
 The existing #5 migrations already satisfy the agreed reservation schema: restricted foreign keys, generated active-only uniqueness, history/timestamp checks, lookup indexes and bounded event counter. They are reused without adding or rewriting a migration.
@@ -119,3 +121,53 @@ The user requested staging, ignore-rule review and a fresh-setup check. The coor
 **Tester — temporary probe corrected:** The first scratch HTTP harness allowed only three seconds for cold schema generation and did not reliably return a failing exit status through Laravel's installed CLI exception handler. Its initial apparent success was disregarded. The tester added an explicit nonzero failure handler and a 45-second request timeout to the temporary probe, repeated the entire fresh setup successfully, and cleaned both scratch runs. No repository application defect was found.
 
 The final PHPUnit result remains 248 tests / 1,804 assertions from the prior milestone; these ignore, attribute and documentation changes did not change business code, and the suite was not rerun. Developer audit, tester fresh-install acceptance and security staged review all completed. The manual browser usability pass and previously recorded broader concurrency/load/future-workflow checks remain outstanding.
+
+## Repository-review follow-up — 8 October 2026
+
+The user requested the five technical review findings and documentation drift be addressed through the developer, tester and security reviewer flow. Event discovery, management, cancellation and waitlist workflows retain their existing tickets and were excluded from this follow-up. GitHub issue #9 was read through the connector: it remains open, with its six acceptance boxes checked. No issue, PR, branch setting or remote content was changed; manual acceptance remains with the user.
+
+### Fixes and decisions
+
+| Finding | Cause and fix | Verification/status |
+| --- | --- | --- |
+| Equivalent email spellings could bypass the five-attempt login budget | MySQL equates accented variants while the previous limiter hashed literal normalized input. The limiter now validates and bounds email before resolving the authoritative indexed account ID, then hashes a namespaced account/IP key. Unknown identities retain a separate normalized email/IP key. | **Fixed.** Real MySQL regressions exhaust mixed spelling/case/trim attempts, check rejection even with a correct password, recovery after 61 seconds, another account's independent budget and invalid input avoiding account lookups. Live Redis checks passed too. |
+| Returned booking had stale event availability/timestamps | The guarded query-builder increment bypassed the event object cached by `associate()`. The action clears that relation after the successful insert; subsequent access reads persisted state. | **Fixed.** Regression compares returned event occupancy and timestamp with a fresh database row. No extra read is added while the action holds the event lock. |
+| Start-cutoff race depended on worker startup completing within three seconds | The test assigned a near-term deadline before launching the worker. It now establishes the cutoff after the worker is observed waiting on the held event lock. | **Fixed.** All eight independent-process races pass. The case verifies end-to-end cutoff rejection during a real wait; source review verifies PHP time sampling placement. The test alone cannot distinguish that placement because the guarded SQL update also checks current database time. |
+| No tracked CI workflow | MySQL and runner acceptance were only manually invoked. The Tests workflow now runs the isolated suite on Linux/PowerShell 7 and the mock wrapper harness on Windows PowerShell and PowerShell 7. | **Workflow added and linted.** First hosted execution and configuring required merge statuses remain pending after publication. Checkout v7.0.1 is pinned to its verified release commit, with read-only contents and credential persistence disabled. |
+| PHP Redis extension was unversioned | Composer does not lock PHP extensions. Docker now installs `redis-6.3.0`. | **Fixed.** The disposable suite successfully rebuilt the runtime with that exact install command and passed. The normal stack was not recreated. |
+| Current guides described implemented features as absent | Authentication notes denied the demo organiser and treated booking as future work; the general manual plan and design walkthrough also contained outdated wording. | **Fixed.** Guides now describe demo roles, implemented booking and account-based throttling, while preserving future-ticket boundaries. Swagger's login description matches the limiter. Local links and rendered PowerShell examples were checked. |
+
+Existing email matching, database schema, public response fields, five/account/IP and thirty/IP budgets are preserved. This fix does not decide whether distinct accented mailboxes should become distinct application accounts. Account-wide controls across multiple IPs remain a documented public-launch follow-up; choosing that policy is separate from repairing equivalent-spelling budget bypass.
+
+### Agent outcomes
+
+**Developer:** Implemented the limiter, cached relation and cutoff-harness fixes in three owned files. No migrations or business workflow expansion. Patch formatting passed; coordinator handled PHP/Docker execution.
+
+**Tester:** Added seven regression cases across the authentication and booking classes; extended the live runner with canonical/accented/case/trim Redis checks and independent-account verification. Both Windows shell wrapper runs passed. Supplied the [morning acceptance checklist](issue-9-review-manual-checks.md), with exact requests, expected outcomes and captured-fixture cleanup. No additional application defect found. The tester did not run the coordinator's database or live HTTP checks.
+
+**Security reviewer:** Reviewed application/tests/CI and the final live-script additions. The original login-budget and cached relation findings are fixed; no new actionable authorization, concurrency, token-disclosure or cleanup defect found. A remaining stale sentence in the general manual plan was reported and corrected. Hosted enforcement, multiple-IP abuse controls and browser/load verification remain explicitly scoped below. The reviewer ran no database mutations.
+
+**Coordinator — CI defect found and fixed:** Actionlint rejected using a matrix expression in `steps.shell`. Two conditional steps now select literal `powershell` and `pwsh` shells; final actionlint passes. The initial documentation parser also needed to remove Markdown's common indentation before parsing here-strings; corrected parsing passed without changing those existing code examples.
+
+### Checks actually executed
+
+| Command/check | Result |
+| --- | --- |
+| `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1 --display-warnings --fail-on-warning` | **255 tests, 1,867 assertions passed**, 23.35 seconds for PHPUnit, exit `0`. Includes the new authentication/returned-event regressions and all eight MySQL race cases. The runtime was rebuilt with pinned Redis. |
+| Disposable-stack cleanup | Project `leggtix-test-4d78b5c8891a46a1af80ac91c0e85531`, its MySQL container, network and generated test image were removed. Final Compose inventory contained only the existing three-service development project. |
+| `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-reservations.ps1` | **Passed, exit `0`**, on PHP 8.4.26, MySQL 8.4.11 and Redis. Mixed-spelling login requests shared five failures and subsequent `429`/`Retry-After`; a different account retained its budget. Guest/invalid/expired auth, overrides, malformed/nonobject/non-JSON/real multipart input, booking, replay/full/ineligible/FIFO/missing-ID outcomes and bodyless requests passed. |
+| Live inventory and cleanup | Exact holders, two matching confirmed rows/counters, one unchanged waiter and the thirty-request reservation actor throttle passed. Fixture event/user/type/reservation/waitlist/token counts all ended at zero. Recovery file removed; shared Redis keys were not flushed. |
+| Both wrapper shells | Windows PowerShell and PowerShell 7 each passed **14 cases**, exit `0`, with application configuration unchanged. |
+| Workflow lint | `rhysd/actionlint:1.7.12` passed, exit `0`, after the shell correction. The disposable no-network container received only workflow text, with no workspace mount. Hosted Actions was not executed. |
+| PHP syntax | Changed application files and the cutoff test passed `php -l` in the PHP 8.4 app container; the complete suite also parsed/executed the new test classes. |
+| Composer | Strict validation passed. Locked dependency audit returned no advisories or abandoned packages, exit `0`. |
+| Documentation/patch checks | Repository Markdown links and PowerShell blocks passed after common indentation removal. `git diff --check` passed; Windows line-ending conversion notices were informational. |
+
+### Still to action or check
+
+1. Follow the [morning acceptance checklist](issue-9-review-manual-checks.md) for the human Swagger/F12 flow: local assets/schema, authorization, strict validation, `201` booking, `409` replay/full, persisted holder/count and refresh returning to `401`. This follow-up did not repeat a browser session.
+2. If manually accepting recovery through real HTTP, wait for the login budget to expire and confirm an equivalent spelling can then log in. The isolated regression already verifies 61-second recovery; the live automatic check verifies enforcement but does not wait for recovery.
+3. After publishing this branch/workflow, verify its first hosted Linux/Windows jobs and configure `MySQL acceptance`, `Windows wrapper (powershell)` and `Windows wrapper (pwsh)` as required checks on the intended merge branch. These repository settings were not changed.
+4. Keep #9 open until the user has reviewed the remaining acceptance evidence. No new feature milestone is required by these fixes. Cross-IP account abuse policy is public-launch work; larger bursts, deliberate deadlock cycles, query/latency measurements and multi-server/future-workflow races retain the existing broader testing tickets.
+
+All changes remain local and uncommitted on `LT-9-Event-Reservations`. The user's pre-existing `.gitignore` modification is preserved. No commit, push, PR creation, issue mutation, deployment or application database reset was performed.

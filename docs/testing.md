@@ -10,6 +10,21 @@ Expected: all tests pass, followed by removal of the temporary test stack. The [
 
 The execution-policy override applies only to this PowerShell process. If your policy already permits local scripts, `.\scripts\test.ps1` can be run directly.
 
+## Continuous integration
+
+[The Tests workflow](../.github/workflows/tests.yml) runs on pushes and pull requests, and supports manual dispatch. `MySQL acceptance` runs the same disposable Compose suite on a Linux runner with PowerShell 7. `Windows wrapper (powershell)` and `Windows wrapper (pwsh)` exercise the runner's success, failure, argument forwarding and cleanup cases on Windows, using a mock Docker command rather than a Windows database stack. The checkout action is pinned to a reviewed commit with read-only repository permissions and credential persistence disabled.
+
+These jobs become available after the workflow is pushed. Their first hosted execution must still be checked. To prevent merging failing changes, configure the protected branch or ruleset to require these three status checks; committing a workflow alone does not enforce branch protection.
+
+Run the wrapper checks locally without starting Docker:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\tests\Test-TestRunner.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\tests\Test-TestRunner.ps1
+```
+
+Expect 14 passing cases per shell and unchanged application configuration. The Dockerfile pins the PHP Redis extension to `6.3.0`; update that version deliberately when rebuilding the runtime.
+
 To run just the authentication tests:
 
 ```powershell
@@ -46,7 +61,7 @@ To verify the running local app, PHP request parsing and Redis throttling:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-reservations.ps1
 ```
 
-This live runner requires the normal app/MySQL/Redis stack and `APP_ENV=local`. It creates dedicated tagged fixtures, sends real HTTP requests, checks committed rows, and deletes only its captured fixtures under event locks. Tokens are omitted from logs. Token-free recovery metadata is saved under ignored `storage/app/private` until cleanup succeeds; a cleanup failure prints an exact recovery command. Existing application data and shared Redis keys are preserved. See the [manual plan](reservation-manual-test-plan.md) for the detailed walkthrough.
+This live runner requires the normal app/MySQL/Redis stack and `APP_ENV=local`. It creates dedicated tagged fixtures, sends real HTTP requests, checks committed rows, verifies equivalent-email login budgets and booking throttles in Redis, and deletes only its captured fixtures under event locks. Tokens are omitted from logs. Token-free recovery metadata is saved under ignored `storage/app/private` until cleanup succeeds; a cleanup failure prints an exact recovery command. Existing application data and shared Redis keys are preserved. See the [manual plan](reservation-manual-test-plan.md) for the detailed walkthrough and the [review follow-up checklist](issue-9-review-manual-checks.md) for morning acceptance.
 
 To check the interactive API reference, generated contracts, local assets and environment guards:
 

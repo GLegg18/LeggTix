@@ -227,7 +227,7 @@ We use `curl.exe` for these checks so expected error responses are easy to read.
 
 The automated tests use an in-memory cache. This exercise checks throttling through the running Docker app, which normally uses Redis.
 
-Login allows five requests per normalized email/IP combination and 30 requests per IP per minute. Successful and failed requests both count. A new email starts a fresh identity counter but does not reset the IP counter; if repeating the walkthrough or sharing an IP with other testers, wait 61 seconds before this step.
+Login allows five requests per account/IP combination and 30 requests per IP per minute. Successful and failed requests both count. Equivalent email spellings that resolve to the same account share a budget. A distinct account or new unknown email has a separate identity counter but does not reset the IP counter; if repeating the walkthrough or sharing an IP with other testers, wait 61 seconds before this step.
 
 ```powershell
 $qaThrottleEmail = "throttle-$([guid]::NewGuid().ToString('N'))@example.test"
@@ -276,7 +276,7 @@ This stops the services and keeps the database data. Leave the containers runnin
 - Guest/old token `401`; invalid input/privilege attempt `422`; excessive attempts `429`.
 - Logging out one token leaves the other token usable.
 
-That verifies the implemented authentication and database foundations. Event booking, promotion, ownership policies and inventory concurrency will need their own tests when those workflows exist. The automated suite already checks token expiry and the bcrypt-shaped-password regression; you do not need to wait 24 hours or construct special hashes by hand.
+That verifies the implemented authentication and database foundations. The [reservation manual plan](reservation-manual-test-plan.md) and [issue #9 report](issue-9-validation.md) cover implemented booking, its authorization boundaries and MySQL inventory races. Event management, cancellation and waitlist promotion remain separate work. The automated suite already checks token expiry and the bcrypt-shaped-password regression; you do not need to wait 24 hours or construct special hashes by hand.
 
 ## If something fails
 

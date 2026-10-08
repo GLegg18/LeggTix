@@ -12,6 +12,8 @@ The [event model guide](events.md) documents the models, relationships, protecte
 
 The [booking guide](reservations.md) documents the reservation model, authenticated creation endpoint, MySQL transaction, retry outcomes and staged waitlist limitation for [issue #9](https://github.com/GLegg18/LeggTix/issues/9). The [reservation manual plan](reservation-manual-test-plan.md) gives repeatable checks; the [issue #9 validation report](issue-9-validation.md) records execution and review findings.
 
+The [review follow-up checklist](issue-9-review-manual-checks.md) covers equivalent-email login throttling, current returned inventory, the pinned Redis runtime, hosted CI enforcement and the remaining morning Swagger checks. The latest follow-up in the validation report records which checks have actually run.
+
 The [testing guide](testing.md) explains the disposable Docker runner, argument forwarding, cleanup and troubleshooting. Follow the [manual acceptance checks](manual-test-plan.md) for copy/paste PowerShell steps and expected responses from the live app.
 
 The [issue #5 verification report](issue-5-validation.md) records executed checks, review findings and verification limits. The guides describe how to repeat the checks; the report records what was verified.
