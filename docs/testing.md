@@ -6,7 +6,7 @@ Start Docker Desktop in Linux-container mode. In PowerShell at the repository ro
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1
 ```
 
-Expected: all tests pass, followed by removal of the temporary test stack. The [issue #6 verification report](issue-6-validation.md) records the latest executed suite and its runtime. The first build needs network access to download images and Composer dependencies. PHP, Composer and MySQL do not need to be installed on Windows. The normal development stack can be running or stopped.
+Expected: all tests pass, followed by removal of the temporary test stack. The [demo data verification report](demo-data-validation.md) records the suite after the seeder additions; the [issue #6 verification report](issue-6-validation.md) records the earlier event model milestone. The first build needs network access to download images and Composer dependencies. PHP, Composer and MySQL do not need to be installed on Windows. The normal development stack can be running or stopped.
 
 The execution-policy override applies only to this PowerShell process. If your policy already permits local scripts, `.\scripts\test.ps1` can be run directly.
 
@@ -22,6 +22,12 @@ To exercise the event model and factory acceptance cases with warnings treated a
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1 --filter=EventModelTest --display-warnings --fail-on-warning
+```
+
+For local demo seeder acceptance:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1 --filter=DemoSeederTest --display-warnings --fail-on-warning
 ```
 
 ## What happens automatically
@@ -69,4 +75,4 @@ The [issue #5 verification report](issue-5-validation.md) records completed auto
 
 The [issue #6 verification report](issue-6-validation.md) records event model/factory verification and the developer, tester and security review outcomes. The [event guide](events.md) explains the model contracts and relevant manual checks.
 
-The runner does not add booking workflows, domain seeds, browser tests or capacity-race coverage. Those remain downstream work; the [database design](database-design.md) records the required locking and concurrency checks.
+The runner exercises the local demo seeders in their acceptance cases; normal tests create their own fixtures. Booking workflows, browser tests and capacity-race coverage remain downstream work; the [database design](database-design.md) records the required locking and concurrency checks.

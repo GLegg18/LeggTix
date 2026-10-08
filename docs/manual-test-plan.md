@@ -47,7 +47,7 @@ docker compose exec app php artisan migrate:status
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1
 ```
 
-**Expected:** all tests pass. The [issue #6 verification report](issue-6-validation.md) records the latest suite size and results; runtime varies by machine.
+**Expected:** all tests pass. The [demo data verification report](demo-data-validation.md) records the latest suite size and results; runtime varies by machine.
 
 The script makes a fresh test database, runs migrations and creates the test fixtures, then removes its temporary containers and database. No manual database creation, root password or `.env` change is needed. The execution-policy override applies only to this PowerShell process. The first run downloads and builds dependencies; the build output is normal.
 

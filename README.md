@@ -28,10 +28,10 @@ From the repository root in PowerShell:
 Copy-Item .env.example .env
 docker compose up --build -d
 docker compose exec app php artisan key:generate
-docker compose exec app php artisan migrate
+docker compose exec app php artisan migrate --seed
 ```
 
-Open [http://localhost:8000/up](http://localhost:8000/up). Laravel's health endpoint should return a successful response. Migrations create `users`, `event_types`, `events`, `reservations`, `waitlist_entries`, and Sanctum's `personal_access_tokens`, alongside Laravel's migration history. No sample accounts or event data are inserted.
+Open [http://localhost:8000/up](http://localhost:8000/up). Laravel's health endpoint should return a successful response. Migrations create `users`, `event_types`, `events`, `reservations`, `waitlist_entries`, and Sanctum's `personal_access_tokens`, alongside Laravel's migration history. Seeding adds the demo accounts, types and events below.
 
 Use the [authentication API guide](docs/authentication.md) to register, log in, fetch the current user, and revoke a token. The API returns JSON errors even when a client omits its `Accept` header.
 
@@ -39,12 +39,56 @@ After migrating, use the [testing guide](docs/testing.md) for the isolated Docke
 
 To stop the services while keeping the MySQL data, run `docker compose down`.
 
-## Reset local data
+## Demo data and login
 
-To drop and recreate the application's tables while keeping the containers and MySQL volume, run:
+For an already migrated local app, add the sample data with:
 
 ```powershell
-docker compose exec app php artisan migrate:fresh
+docker compose exec app php artisan db:seed
+```
+
+Both demo accounts use **`demo-password`** when first created:
+
+| Account | Email | Role |
+| --- | --- | --- |
+| Demo User | `demo.user@example.test` | `regular_user` |
+| Demo Organiser | `demo.owner@example.test` | `organiser` |
+
+These are local review credentials. The demo seeder runs only with `APP_ENV=local` or `testing`; other environments are rejected even with `--force`. Seeding creates no admin account or access token. Use the ordinary login endpoint, for example in PowerShell:
+
+```powershell
+$demoLogin = Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/login -ContentType 'application/json' -Body (@{
+    email = 'demo.user@example.test'
+    password = 'demo-password'
+} | ConvertTo-Json)
+$demoLogin.user
+```
+
+Expect the customer profile and role `regular_user`. Change the email to `demo.owner@example.test` to log in as the organiser. The response also contains the bearer token described in the [authentication guide](docs/authentication.md).
+
+Three active types (`concert`, `workshop`, `meetup`) and six organiser-owned events are created:
+
+| Event | Type | Status | Schedule at creation | Capacity |
+| --- | --- | --- | --- | --- |
+| Demo: Riverside Acoustic Night | concert | published | 14 days ahead | 120 |
+| Demo: Laravel Makers Workshop | workshop | published | 21 days ahead | 24 |
+| Demo: Community Coffee Meetup | meetup | draft | 28 days ahead | 40 |
+| Demo: Garden Session | concert | cancelled | 35 days ahead | 80 |
+| Demo: Intro to Web APIs | workshop | completed | 14 days ago | 20 |
+| Demo: Last Week's Community Meetup | meetup | published | 7 days ago | 30 |
+
+Schedules are UTC instants with `Europe/London` as the display timezone. Every new event has zero confirmed occupancy and no reservation/waitlist fixtures. The past published event demonstrates the start-time cutoff. Event APIs and management UI are still follow-on work; these rows are ready for database/model inspection without manually creating fixtures in Tinker.
+
+Rerunning creates missing fixtures and preserves existing passwords, edits, dates, retired types and booking history. Fixture identities are the demo emails, type slugs and owner/event names: changing an identity or deleting a sample can cause its original to be created again. The seeder refuses conflicting account roles and new events that would use a retired type, rolling back the run. It does not reset existing credentials or move old events into the future; use the explicit local reset below for a fresh demo.
+
+The [demo data verification report](docs/demo-data-validation.md) records checks, review outcomes and a short manual plan.
+
+## Reset local data
+
+To drop and recreate the application's tables and restore fresh demo data while keeping the containers and MySQL volume, run:
+
+```powershell
+docker compose exec app php artisan migrate:fresh --seed
 ```
 
 To remove all local MySQL data as well as stop the services, run:
@@ -57,7 +101,7 @@ Then start the stack and migrate again:
 
 ```powershell
 docker compose up --build -d
-docker compose exec app php artisan migrate
+docker compose exec app php artisan migrate --seed
 ```
 
 `migrate:fresh` and `down --volumes` are destructive to local database data.
@@ -100,7 +144,7 @@ Controllers should validate requests and coordinate small action/service classes
 
 Registration creates only `regular_user` accounts. Login issues a Laravel Sanctum token that expires after 24 hours; logout revokes the current token. The [authentication guide](docs/authentication.md) documents validation, response contracts, token handling, and rate limits.
 
-The [MVP schema](docs/database-design.md) is implemented with MySQL constraints, generated active uniqueness keys, restricted foreign keys, and UTC `DATETIME(6)` domain timestamps. [Event models and factories](docs/events.md) provide ownership/type relationships, typed lifecycle statuses, scheduling and fixture states for issue #6. Its row constraints and read helpers do not implement booking capacity allocation or cross-table reservation/waitlist rules. Event management, reservation and waitlist actions, their policies and locking protocol, domain seed data, password reset, and email verification remain follow-on work. There are no domain endpoints yet.
+The [MVP schema](docs/database-design.md) is implemented with MySQL constraints, generated active uniqueness keys, restricted foreign keys, and UTC `DATETIME(6)` domain timestamps. [Event models and factories](docs/events.md) provide ownership/type relationships, typed lifecycle statuses, scheduling and fixture states for issue #6. Local demo seeders provide the review accounts and sample types/events above. Its row constraints and read helpers do not implement booking capacity allocation or cross-table reservation/waitlist rules. Event management, reservation and waitlist actions, their policies and locking protocol, password reset, and email verification remain follow-on work. There are no domain endpoints yet.
 
 ## Design documentation
 

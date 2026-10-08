@@ -7,7 +7,7 @@
 - `Event::owner()` belongs to `User` through `owner_id`; `User::ownedEvents()` is the inverse.
 - `Event::eventType()` belongs to `EventType` through `event_type_id`; `EventType::events()` is the inverse.
 - `EventStatus` contains exactly `draft`, `published`, `cancelled` and `completed`. An event starts as a draft with `confirmed_count = 0`.
-- An event type is an editable catalogue row, with an active flag, rather than an enum or free-text category. Catalogue seeds and admin management remain separate work.
+- An event type is an editable catalogue row, with an active flag, rather than an enum or free-text category. The [local demo seeders](../README.md#demo-data-and-login) provide initial types; admin management remains separate work.
 
 The existing migrations enforce positive unsigned capacity, a counter no larger than capacity, valid status values, an optional end later than start, the agreed listing indexes and restricted owner/type foreign keys. No new migration or rewrite of the applied schema is needed.
 
@@ -43,7 +43,7 @@ $event = Event::factory()
     ->create();
 ```
 
-These are fixture tools, not public create/publish workflows. Avoid creating a nonzero occupancy counter without matching confirmed reservation rows; the model layer does not reconcile inventory. Domain seeds are tracked separately from this ticket.
+These are fixture tools, not public create/publish workflows. Avoid creating a nonzero occupancy counter without matching confirmed reservation rows; the model layer does not reconcile inventory. The [local demo seeders](../README.md#demo-data-and-login) provide persistent sample accounts, types and events for review.
 
 ## Acceptance checks
 
