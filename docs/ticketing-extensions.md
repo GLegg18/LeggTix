@@ -9,7 +9,7 @@ The useful expansion is a path from free, single-place reservations to a small t
 | Phase | Add when the product needs it | Dependency and boundary |
 | --- | --- | --- |
 | MVP | Free general admission, one place per account per event | Existing five-table proposal; no seats, payment provider or organisation permission engine. |
-| Shared venues | Reusable addresses and venue listings | Add `venues`; retain capacity on each scheduled event occurrence. Venue seating is a later addition. |
+| Shared venues | Reusable addresses and venue listings | Add `venues`; retain capacity on each scheduled event occurrence. Add approved configurations when layouts vary by use; detailed seating is a later addition. |
 | Organiser teams | Several people need explicit access to one event | Add `teams`, `team_memberships`, `event_team_grants`; retain `events.owner_id`. Independent of checkout. |
 | Independent account roles | A person needs several independent management capability sets | Add `roles`, `user_roles` only when the current role field no longer expresses the required capabilities. Customer booking already works for organisers/admins. |
 | Paid general admission | Real checkout, temporary allocation and issued admission credentials | Agree purchase limits, hold duration, cancellation/refund policy, currency and provider first. Introduce checkout tables and reliable recovery. |
@@ -39,11 +39,13 @@ For the first paid version all ticket prices share one general-admission capacit
 
 [Open the venue/seating diagram](diagrams/leggtix-venues-seating-er.svg). Solid relationships describe the proposed extension; hold/order pointers connect to the later checkout model.
 
+The [venue configuration refinement](venue-configurations.md), added on 8 October 2026, distinguishes reusable venue details, approved football/concert configurations and each occurrence's sale capacity. It adds a companion relationship diagram, closed-stand/pitch examples and publication guards; these remain future #28 work, with mixed standing/seated allocation explicitly deferred.
+
 Use the MVP conventions: `BIGINT UNSIGNED` IDs/FKs, UTC `DATETIME(6)`, server-owned transitions, InnoDB, named checks/constraints and restricted deletion of referenced historical data. Opaque provider IDs and credential hashes require exact, case-sensitive comparisons rather than a human-name collation.
 
 | Table/change | Key fields | Constraints and query indexes |
 | --- | --- | --- |
-| `venues` | `id` PK; `name`; address fields; country code; IANA `timezone`; nullable `capacity_ceiling`; `is_active` | Positive ceiling when present; retire referenced venues. Index location/name only for an actual catalogue query, not every address field. |
+| `venues` | `id` PK; `name`; nullable description; address fields; country code; optional coordinates; IANA `timezone`; nullable `capacity_ceiling`; `is_active` | Positive ceiling when present, meaning a genuine bound across supported configurations; configuration limits are separate. Retire referenced venues. Index location/name only for an actual catalogue query, not every address field. |
 | `events.venue_id` | Nullable FK to `venues.id` initially | Index `(venue_id, starts_at, id)` for an occurrence list at a venue. Preserve `events.venue` as display/history text during migration. |
 | `venue_sections` | `id` PK; `venue_id` FK; `code`; `name`; `is_active` | Unique `(venue_id, code)`. A section belongs to one venue. |
 | `venue_seats` | `id` PK; `venue_section_id` FK; `row_label`; `seat_label`; `is_active` | Unique `(venue_section_id, row_label, seat_label)`. These are physical layout records, not sale inventory. |
