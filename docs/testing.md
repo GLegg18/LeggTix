@@ -6,7 +6,7 @@ Start Docker Desktop in Linux-container mode. In PowerShell at the repository ro
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1
 ```
 
-Expected: all tests pass, followed by removal of the temporary test stack. The [demo data verification report](demo-data-validation.md) records the suite after the seeder additions; the [issue #6 verification report](issue-6-validation.md) records the earlier event model milestone. The first build needs network access to download images and Composer dependencies. PHP, Composer and MySQL do not need to be installed on Windows. The normal development stack can be running or stopped.
+Expected: all tests pass, followed by removal of the temporary test stack. The [issue #9 validation report](issue-9-validation.md) records booking and independent MySQL race verification; the [demo data verification report](demo-data-validation.md) and [issue #6 verification report](issue-6-validation.md) record earlier milestones. The first build needs network access to download images and Composer dependencies. PHP, Composer and MySQL do not need to be installed on Windows. The normal development stack can be running or stopped.
 
 The execution-policy override applies only to this PowerShell process. If your policy already permits local scripts, `.\scripts\test.ps1` can be run directly.
 
@@ -29,6 +29,32 @@ For local demo seeder acceptance:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1 --filter=DemoSeederTest --display-warnings --fail-on-warning
 ```
+
+For reservation business/API acceptance and the independent-process MySQL races:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1 --filter=Reservation --display-warnings --fail-on-warning
+```
+
+The race class uses committed fixtures and separate PHP processes with independent MySQL connections. It coordinates contenders around an event lock and checks the final committed counter and confirmed rows. Barrier waits are bounded and worker errors fail the case. These are correctness checks for booking, not a load benchmark or the complete cancellation/waitlist race suite.
+
+The concurrency suite also exercises real MySQL lock-timeout retry exhaustion through the Laravel HTTP kernel. It sets a one-second timeout only on its isolated worker session, verifies the three-attempt busy response and no allocation, then confirms booking after releasing the lock. It does not change normal database timeout settings.
+
+To verify the running local app, PHP request parsing and Redis throttling:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-reservations.ps1
+```
+
+This live runner requires the normal app/MySQL/Redis stack and `APP_ENV=local`. It creates dedicated tagged fixtures, sends real HTTP requests, checks committed rows, and deletes only its captured fixtures under event locks. Tokens are omitted from logs. Token-free recovery metadata is saved under ignored `storage/app/private` until cleanup succeeds; a cleanup failure prints an exact recovery command. Existing application data and shared Redis keys are preserved. See the [manual plan](reservation-manual-test-plan.md) for the detailed walkthrough.
+
+To check the interactive API reference, generated contracts, local assets and environment guards:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1 --filter=ApiDocumentationTest --display-warnings --fail-on-warning
+```
+
+Open the [Swagger explorer](http://localhost:8000/docs/api) for a browser walkthrough. The [OpenAPI JSON](http://localhost:8000/docs/api.json) is the corrected specification used by the UI. Both require a local/testing environment and development dependencies. Login returns `access_token`; paste its raw value into **Authorize**. Swagger adds the `Bearer` prefix. Refreshing the page forgets authorization, and **Try it out** sends real requests.
 
 ## What happens automatically
 
@@ -75,4 +101,4 @@ The [issue #5 verification report](issue-5-validation.md) records completed auto
 
 The [issue #6 verification report](issue-6-validation.md) records event model/factory verification and the developer, tester and security review outcomes. The [event guide](events.md) explains the model contracts and relevant manual checks.
 
-The runner exercises the local demo seeders in their acceptance cases; normal tests create their own fixtures. Booking workflows, browser tests and capacity-race coverage remain downstream work; the [database design](database-design.md) records the required locking and concurrency checks.
+The runner exercises the local demo seeders in their acceptance cases; normal tests create their own fixtures. Reservation tests cover booking and its MySQL races. Cancellation, waitlist/promotion races, load benchmarks and automated browser regression tests remain downstream work; the [database design](database-design.md) records the full verification contract. The [issue #9 report](issue-9-validation.md) records the live API and exploratory Swagger browser checks actually performed.

@@ -17,6 +17,8 @@ public_html/hot
 
 storage/*.key
 .env
+.env.*
+!.env.example
 Homestead.yaml
 Homestead.json
 /.vagrant
@@ -25,13 +27,14 @@ Homestead.json
 
 /public/build
 /storage/pail
-.env.backup
-.env.production
 .phpactor.json
 auth.json
 
 # Laravel generated runtime files
 /bootstrap/cache/*.php
+/storage/app/**
+!/storage/app/**/
+!/storage/app/**/.gitkeep
 /storage/framework/cache/data/*
 !/storage/framework/cache/data/.gitkeep
 /storage/framework/sessions/*

@@ -4,7 +4,7 @@ Follow the [first-run setup](../README.md#first-run), then use **PowerShell at t
 
 Copy one code block at a time, press Enter, then compare the result with the **Expected** text. Keep the same terminal open: later steps reuse values saved earlier. All commands go in that PowerShell terminal.
 
-Allow about 15 minutes, plus downloads on the first test run. This checks the implemented authentication and schema; booking and waitlist endpoints come in later tickets.
+Allow about 15 minutes, plus downloads on the first test run. This checks the implemented authentication and schema. Booking is covered by the [reservation acceptance plan](reservation-manual-test-plan.md); waitlist endpoints remain later work.
 
 ## 1. Check the three containers
 

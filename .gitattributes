@@ -1,0 +1,6 @@
+# Preserve upstream distribution bytes and existing upstream whitespace.
+/resources/vendor/swagger-ui/swagger-ui-bundle.js -text -whitespace
+/resources/vendor/swagger-ui/swagger-ui.css -text -whitespace
+/resources/vendor/swagger-ui/LICENSE -text -whitespace
+/resources/vendor/swagger-ui/NOTICE -text -whitespace
+/resources/vendor/swagger-ui/swagger-ui-bundle.js.LICENSE.txt -text -whitespace

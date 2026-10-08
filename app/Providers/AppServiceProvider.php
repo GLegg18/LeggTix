@@ -30,5 +30,10 @@ class AppServiceProvider extends ServiceProvider
                 Limit::perMinute(5)->by('login:identity:'.hash('sha256', $identity.'|'.$request->ip())),
             ];
         });
+
+        RateLimiter::for('reservations', fn (Request $request): array => [
+            Limit::perMinute(30)->by('reservations:user:'.$request->user()->getAuthIdentifier()),
+            Limit::perMinute(120)->by('reservations:ip:'.$request->ip()),
+        ]);
     }
 }

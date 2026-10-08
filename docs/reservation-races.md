@@ -1,6 +1,6 @@
 # Reservation races: last place, same seat and retries
 
-This note makes the concurrency design in [the MVP database report](database-design.md) concrete. It is an implementation plan for [#9](https://github.com/GLegg18/LeggTix/issues/9) and [#12](https://github.com/GLegg18/LeggTix/issues/12); no domain tables or working reservation endpoints exist yet.
+This note makes the concurrency design in [the MVP database report](database-design.md) concrete. The five domain tables and [reservation creation workflow](reservations.md) are implemented. The timelines remain the design contract for [#9](https://github.com/GLegg18/LeggTix/issues/9) and the broader race coverage in [#12](https://github.com/GLegg18/LeggTix/issues/12); cancellation, waitlist promotion and the named-seat extension remain separate work. See the [issue #9 validation report](issue-9-validation.md) for executed booking checks.
 
 The MVP reserves one general-admission place, so “last seat” currently means the final unit of event capacity. A named seat such as row A, seat 42 belongs to the [assigned-seating extension](ticketing-extensions.md). Both models rely on MySQL transactions, current reads and guarded writes. Indexes find the row quickly; the transaction prevents two customers from owning the same inventory.
 

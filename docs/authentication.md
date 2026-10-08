@@ -2,6 +2,8 @@
 
 Implemented for [issue #5](https://github.com/GLegg18/LeggTix/issues/5). This milestone uses [Laravel Sanctum API tokens](https://laravel.com/framework/docs/13.x/sanctum#api-token-authentication) and Laravel's credential checking/password hashing. It supports API clients with bearer tokens; a future Nuxt browser integration should use Sanctum's first-party session/cookie flow with CSRF protection.
 
+Use the local [Swagger API explorer](http://localhost:8000/docs/api) for operation schemas and interactive requests. Log in there, copy the issued `access_token` into **Authorize** without adding `Bearer`, then call the protected operations. Tokens are not persisted across page reloads. The reference below records implementation decisions and console examples.
+
 ## Routes and responses
 
 All paths below are relative to `http://localhost:8000`. Send JSON request bodies with `Content-Type: application/json`. Sending `Accept: application/json` is recommended; API errors still return JSON if it is omitted.

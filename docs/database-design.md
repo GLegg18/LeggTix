@@ -8,7 +8,7 @@ Build five domain tables: `users`, `event_types`, `events`, `reservations`, and 
 
 For a concrete two-customer timeline, start with [reservation races: last place and same seat](reservation-races.md). The [staged ticketing extension plan](ticketing-extensions.md) explains how venues, assigned seats, organiser teams, independent roles and paid checkout can fit later while this MVP remains five tables.
 
-This is the implementation contract for the MVP tickets. The initial [issue #5 implementation](authentication.md) now includes all five domain migrations and Sanctum authentication. Row-level database protections exist; event/reservation/waitlist actions, policies and transactional inventory protections remain downstream work. Docker Compose selects MySQL 8.4; the design targets InnoDB on that version and the configured Laravel 13 / PHP 8.4 environment.
+This is the implementation contract for the MVP tickets. The initial [issue #5 implementation](authentication.md) includes all five domain migrations and Sanctum authentication. [Issue #9](reservations.md) implements reservation creation using current event-first locks and atomic guarded inventory writes, with a conservative refusal while waiters have priority. Event management, cancellation/history, waitlist actions and the bounded promotion path remain downstream work. Docker Compose selects MySQL 8.4; the design targets InnoDB on that version and the configured Laravel 13 / PHP 8.4 environment.
 
 | Question | MVP decision | Reason |
 | --- | --- | --- |
