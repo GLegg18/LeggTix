@@ -13,18 +13,18 @@ class MigrationTest extends TestCase
     {
         try {
             $this->artisan('migrate:fresh', ['--force' => true])->assertExitCode(0);
-            $this->assertSame(6, DB::table('migrations')->count());
+            $this->assertSame(7, DB::table('migrations')->count());
             $this->artisan('migrate:rollback', ['--force' => true])->assertExitCode(0);
-            foreach (['personal_access_tokens', 'waitlist_entries', 'reservations', 'events', 'event_types', 'users'] as $table) {
+            foreach (['failed_jobs', 'personal_access_tokens', 'waitlist_entries', 'reservations', 'events', 'event_types', 'users'] as $table) {
                 $this->assertFalse(Schema::hasTable($table), $table);
             }
             $this->artisan('migrate', ['--force' => true])->assertExitCode(0);
-            foreach (['users', 'event_types', 'events', 'reservations', 'waitlist_entries', 'personal_access_tokens'] as $table) {
+            foreach (['users', 'event_types', 'events', 'reservations', 'waitlist_entries', 'personal_access_tokens', 'failed_jobs'] as $table) {
                 $this->assertTrue(Schema::hasTable($table), $table);
             }
-            $this->assertSame(6, DB::table('migrations')->count());
+            $this->assertSame(7, DB::table('migrations')->count());
             $this->artisan('migrate', ['--force' => true])->assertExitCode(0);
-            $this->assertSame(6, DB::table('migrations')->count());
+            $this->assertSame(7, DB::table('migrations')->count());
         } finally {
             RefreshDatabaseState::$migrated = false;
         }

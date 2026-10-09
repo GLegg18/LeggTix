@@ -1,0 +1,36 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mysql:
+    name: MySQL acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TEST_PROJECT_NAME: leggtix-ci-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run isolated MySQL tests
+        shell: bash
+        run: |
+          docker compose --project-name "$TEST_PROJECT_NAME" --file docker-compose.test.yml \
+            run --rm --build -T tests php artisan test --compact --display-warnings --fail-on-warning
+      - name: Clean up test stack
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          docker compose --project-name "$TEST_PROJECT_NAME" --file docker-compose.test.yml \
+            down --volumes --remove-orphans --rmi local

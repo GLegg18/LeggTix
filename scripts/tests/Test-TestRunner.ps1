@@ -66,7 +66,9 @@ function Invoke-WrapperCase {
     $oldLog = $env:LEGGTIX_WRAPPER_TEST_LOG
     $oldMockPath = $env:LEGGTIX_WRAPPER_TEST_PATH
     try {
-        $env:PATH = $caseDirectory + ';' + (Join-Path $env:SystemRoot 'System32')
+        # System32 can contain a real Docker CLI on hosted Windows runners.
+        # Shell paths are absolute; the shim uses COMSPEC, so no host PATH is needed.
+        $env:PATH = $caseDirectory
         $env:LEGGTIX_WRAPPER_TEST_MODE = $Mode
         $env:LEGGTIX_WRAPPER_TEST_LOG = $caseLog
         $env:LEGGTIX_WRAPPER_TEST_PATH = $env:PATH

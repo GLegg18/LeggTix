@@ -8,7 +8,7 @@ Build five domain tables: `users`, `event_types`, `events`, `reservations`, and 
 
 For a concrete two-customer timeline, start with [reservation races: last place and same seat](reservation-races.md). The [staged ticketing extension plan](ticketing-extensions.md) explains how venues, assigned seats, organiser teams, independent roles and paid checkout can fit later while this MVP remains five tables.
 
-This is the implementation contract for the MVP tickets. The initial [issue #5 implementation](authentication.md) now includes all five domain migrations and Sanctum authentication. Row-level database protections exist; event/reservation/waitlist actions, policies and transactional inventory protections remain downstream work. Docker Compose selects MySQL 8.4; the design targets InnoDB on that version and the configured Laravel 13 / PHP 8.4 environment.
+This is the implementation contract for the MVP tickets. The initial [issue #5 implementation](authentication.md) includes all five domain migrations and Sanctum authentication. [Issue #9](reservations.md) implements reservation creation using current event-first locks and atomic guarded inventory writes, with a conservative refusal while waiters have priority. Event management, cancellation/history, waitlist actions and the bounded promotion path remain downstream work. Docker Compose selects MySQL 8.4; the design targets InnoDB on that version and the configured Laravel 13 / PHP 8.4 environment.
 
 | Question | MVP decision | Reason |
 | --- | --- | --- |
@@ -37,6 +37,8 @@ The last decision interprets the spec's promotion as a free reservation, with jo
 - There is no direct reservation-to-waitlist foreign key. Promotion updates both records atomically; its notification receives the exact new reservation ID. A permanent link can be added later if support/reporting requires it.
 
 ## Schema conventions
+
+Laravel infrastructure adds `personal_access_tokens` for authentication and `failed_jobs` for the configured database failed-job provider. Pending jobs use Redis. These infrastructure tables sit outside the five domain tables shown in the ER diagram.
 
 - Primary keys are auto-incrementing `BIGINT UNSIGNED`; foreign keys use the same type. Numeric IDs are adequate for this local API and never substitute for authorization.
 - Use InnoDB, `utf8mb4`, and the project's configured collation. Use explicit, named foreign keys, unique indexes, and enforced `CHECK` constraints. Stable status/role slugs are `VARCHAR` with PHP backed enums and matching database checks; editable event types use rows.
@@ -313,5 +315,5 @@ No migration SQL, Laravel Policies, API behaviour, PHPUnit suite or concurrent M
 
 1. Open [the documentation index](README.md) and this note. Expect five domain tables, the role/ownership decision, unrestricted organiser event types, and a clear distinction between proposed design and implemented behaviour.
 2. Open [the SVG](diagrams/leggtix-database-er.svg) in an SVG-capable browser, or inspect [the PNG preview](diagrams/leggtix-database-er.png). Expect five readable entity boxes, six labelled relationships, the `regular_user` role slug, `confirmed_count` and both generated active uniqueness keys. Compare key fields with the complete definitions above.
-3. Review the transaction/performance sections. Expect guarded counter and reservation writes together, event-first locks, FIFO protection, bounded work and a continuation/recovery trigger. The acceptance table gives the expected outcomes for implementation tests; no domain endpoints exist to exercise yet.
+3. Review the transaction/performance sections. Expect guarded counter and reservation writes together, event-first locks, FIFO protection, bounded work and a continuation/recovery trigger. The acceptance table includes future workflows; use the [reservation manual plan](reservation-manual-test-plan.md) for the implemented booking endpoint. Cancellation and waitlist workflows remain separate tickets.
 4. Optionally run `python docs/diagrams/render_database_er.py` from the repository root using any installed Python 3 runtime. Expect validation output and exit code zero. SVG generation uses the standard library; `--preview` attempts existing optional rasterisers without installing them. This is a document check and needs no Docker, database credentials or seed accounts.

@@ -17,15 +17,23 @@ Expect a Compose version and `linux`. Preserve an existing `.env`:
 ```powershell
 $issue6NewEnvironment = -not (Test-Path -LiteralPath .env)
 if ($issue6NewEnvironment) { Copy-Item .env.example .env }
-docker compose up --build -d
-if ($issue6NewEnvironment) { docker compose exec app php artisan key:generate }
+docker compose build app
+docker compose run --rm --no-deps app composer install --no-interaction
+if ($issue6NewEnvironment) { docker compose run --rm --no-deps app php artisan key:generate }
+docker compose up -d
+docker compose logs -f app
+```
+
+Wait for `Server running on [http://0.0.0.0:8000]`, then press **Ctrl+C** to stop following logs; the services keep running. Continue with:
+
+```powershell
 docker compose exec app php artisan migrate
 docker compose ps
 docker compose exec app php artisan migrate:status
 (Invoke-WebRequest -UseBasicParsing http://localhost:8000/up).StatusCode
 ```
 
-Expect app/MySQL/Redis running, all six migrations `Ran`, and health `200`. No domain seeds or existing accounts are needed.
+Expect app/MySQL/Redis running, all seven migrations `Ran`, and health `200`. The current migrations include authentication tokens and failed-job storage alongside the five domain tables. No domain seeds or existing accounts are needed.
 
 ## 2. Run the isolated acceptance tests
 

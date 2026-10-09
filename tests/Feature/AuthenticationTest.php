@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\AuthService;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Testing\TestResponse;
@@ -359,6 +360,75 @@ class AuthenticationTest extends TestCase
         }
         $this->api('POST', '/api/login', ['email' => 'new-customer@example.test', 'password' => 'invalid'])
             ->assertStatus(429)->assertHeader('Retry-After');
+    }
+
+    public function test_mysql_equivalent_email_spellings_share_the_existing_accounts_login_budget(): void
+    {
+        $user = User::factory()->create(['email' => 'john@example.test']);
+        $this->assertSame($user->id, User::where('email', 'jöhn@example.test')->value('id'));
+
+        foreach (['john@example.test', 'jöhn@example.test', '  JÖHN@EXAMPLE.TEST  ', 'JOHN@EXAMPLE.TEST', ' jöhn@example.test '] as $email) {
+            $this->api('POST', '/api/login', ['email' => $email, 'password' => 'incorrect-password'])
+                ->assertUnprocessable()->assertJsonValidationErrors('email');
+        }
+
+        foreach (['john@example.test', 'jöhn@example.test', '  JÖHN@EXAMPLE.TEST  '] as $email) {
+            $this->api('POST', '/api/login', ['email' => $email, 'password' => 'password'])
+                ->assertStatus(429)->assertHeader('Retry-After');
+        }
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+
+        $this->travel(61)->seconds();
+        $this->api('POST', '/api/login', ['email' => '  JÖHN@EXAMPLE.TEST  ', 'password' => 'password'])
+            ->assertOk()->assertJsonPath('user.id', $user->id)->assertJsonPath('user.email', 'john@example.test');
+        $this->assertDatabaseCount('personal_access_tokens', 1);
+    }
+
+    public function test_exhausting_one_existing_account_budget_does_not_block_a_different_account_on_the_same_ip(): void
+    {
+        $blocked = User::factory()->create(['email' => 'john@example.test']);
+        $other = User::factory()->create(['email' => 'jane@example.test']);
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this->api('POST', '/api/login', ['email' => $blocked->email, 'password' => 'incorrect-password'])
+                ->assertUnprocessable();
+        }
+
+        $this->api('POST', '/api/login', ['email' => 'jöhn@example.test', 'password' => 'password'])
+            ->assertStatus(429)->assertHeader('Retry-After');
+        $this->api('POST', '/api/login', ['email' => '  JANE@EXAMPLE.TEST  ', 'password' => 'password'])
+            ->assertOk()->assertJsonPath('user.id', $other->id);
+        $this->assertDatabaseCount('personal_access_tokens', 1);
+        $this->assertDatabaseMissing('personal_access_tokens', ['tokenable_id' => $blocked->id]);
+    }
+
+    #[DataProvider('invalidLimiterEmails')]
+    public function test_invalid_email_is_rejected_without_a_user_lookup_or_token(mixed $email): void
+    {
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        try {
+            $this->api('POST', '/api/login', ['email' => $email, 'password' => 'password'])
+                ->assertUnprocessable()->assertJsonValidationErrors('email');
+            $queries = DB::getQueryLog();
+        } finally {
+            DB::disableQueryLog();
+        }
+
+        $userQueries = array_filter($queries, fn (array $query): bool => str_contains(strtolower($query['query']), '`users`'));
+        $this->assertSame([], array_values($userQueries), 'Invalid email must not reach an account query in the limiter or authentication.');
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+    }
+
+    public static function invalidLimiterEmails(): array
+    {
+        return [
+            'null' => [null],
+            'array' => [['john@example.test']],
+            'malformed' => ['invalid'],
+            'oversized' => [str_repeat('x', 256).'@example.test'],
+        ];
     }
 
     public function test_registration_is_limited_by_ip(): void

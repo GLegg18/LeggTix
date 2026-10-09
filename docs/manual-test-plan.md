@@ -4,7 +4,7 @@ Follow the [first-run setup](../README.md#first-run), then use **PowerShell at t
 
 Copy one code block at a time, press Enter, then compare the result with the **Expected** text. Keep the same terminal open: later steps reuse values saved earlier. All commands go in that PowerShell terminal.
 
-Allow about 15 minutes, plus downloads on the first test run. This checks the implemented authentication and schema; booking and waitlist endpoints come in later tickets.
+Allow about 15 minutes, plus downloads on the first test run. This checks the implemented authentication and schema. Booking is covered by the [reservation acceptance plan](reservation-manual-test-plan.md); waitlist endpoints remain later work.
 
 ## 1. Check the three containers
 
@@ -39,7 +39,7 @@ docker compose exec redis redis-cli ping
 docker compose exec app php artisan migrate:status
 ```
 
-**Expected:** all six migrations say `Ran`. They create users, event types, events, reservations, waitlist entries and authentication tokens.
+**Expected:** all seven migrations say `Ran`. They create users, event types, events, reservations, waitlist entries, authentication tokens and failed-job storage. If an existing checkout shows a pending migration, run `docker compose exec app php artisan migrate`, then check the status again.
 
 ## 3. Run the automated tests
 
@@ -227,7 +227,7 @@ We use `curl.exe` for these checks so expected error responses are easy to read.
 
 The automated tests use an in-memory cache. This exercise checks throttling through the running Docker app, which normally uses Redis.
 
-Login allows five requests per normalized email/IP combination and 30 requests per IP per minute. Successful and failed requests both count. A new email starts a fresh identity counter but does not reset the IP counter; if repeating the walkthrough or sharing an IP with other testers, wait 61 seconds before this step.
+Login allows five requests per account/IP combination and 30 requests per IP per minute. Successful and failed requests both count. Equivalent email spellings that resolve to the same account share a budget. A distinct account or new unknown email has a separate identity counter but does not reset the IP counter; if repeating the walkthrough or sharing an IP with other testers, wait 61 seconds before this step.
 
 ```powershell
 $qaThrottleEmail = "throttle-$([guid]::NewGuid().ToString('N'))@example.test"
@@ -270,13 +270,13 @@ This stops the services and keeps the database data. Leave the containers runnin
 
 ## What a complete pass means
 
-- Three running containers; app health `200`; Redis `PONG`; six migrations `Ran`.
+- Three running containers; app health `200`; Redis `PONG`; seven migrations `Ran`.
 - Automated suite: all tests passed; use the latest verification report for the recorded test and assertion counts.
 - Register `201`; current user/login `200`; logout `204`.
 - Guest/old token `401`; invalid input/privilege attempt `422`; excessive attempts `429`.
 - Logging out one token leaves the other token usable.
 
-That verifies the implemented authentication and database foundations. Event booking, promotion, ownership policies and inventory concurrency will need their own tests when those workflows exist. The automated suite already checks token expiry and the bcrypt-shaped-password regression; you do not need to wait 24 hours or construct special hashes by hand.
+That verifies the implemented authentication and database foundations. The [reservation manual plan](reservation-manual-test-plan.md) and [issue #9 report](issue-9-validation.md) cover implemented booking, its authorization boundaries and MySQL inventory races. Event management, cancellation and waitlist promotion remain separate work. The automated suite already checks token expiry and the bcrypt-shaped-password regression; you do not need to wait 24 hours or construct special hashes by hand.
 
 ## If something fails
 
