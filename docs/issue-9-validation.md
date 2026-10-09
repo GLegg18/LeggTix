@@ -193,3 +193,28 @@ The coordinator simplified the workflow to one Ubuntu `MySQL acceptance` job usi
 | Documentation and patch | 35 local links resolved and 30 PowerShell blocks parsed across the three revised current guides. Patch formatting passed. |
 
 The revised workflow has not been published or executed on GitHub. After publication, select its exact commit in Actions and expect one green `MySQL acceptance` job, passing tests and a successful `Clean up test stack` step. If branch protection was configured, require only `MySQL acceptance` and remove both obsolete Windows wrapper requirements. Repository settings were not changed. Issue #9 remains open; the browser, real HTTP recovery and broader checks listed in the [morning checklist](issue-9-review-manual-checks.md) still apply. No browser or deployment verification was repeated. These follow-up edits remain uncommitted; the pre-existing `.gitignore` change is preserved.
+
+## Morning failed-job storage fix — 9 October 2026
+
+The user reported SQL error `1146` when following the checklist's `docker compose exec app php artisan queue:failed` step. The coordinator reproduced the error in the normal local stack. Redis is the pending-job connection, while `config/queue.php` selects Laravel's `database-uuids` failed-job provider. No migration installed that provider's `failed_jobs` table. The manual guides incorrectly tolerated the resulting exception; this was a configuration/schema mismatch, not evidence of a failed reservation.
+
+**Developer — fixed:** Added `2026_10_09_000001_create_failed_jobs_table.php`, matching the installed Laravel 13 migration stub, including unique UUID, payload/exception storage, failure timestamp and composite index. Forward migration creates only this infrastructure table; rollback removes it. Queue configuration and reservation behavior are unchanged.
+
+**Tester:** Added three real-MySQL cases for empty console listing, configured-provider persistence/listing/scoped deletion and duplicate UUID protection. Updated the migration lifecycle test for seven migrations and failed-job rollback/recreation. No additional application bug found. The final listing assertions capture Artisan output explicitly; the initial full run passed, and a focused run verified the final assertion revision. No Redis worker failure or retry dispatch was exercised.
+
+**Security reviewer:** No actionable security or data-integrity finding. Reviewed migration/provider compatibility, uniqueness, test isolation, rollback and current setup instructions. Source and patch checks only; database execution was performed by the coordinator.
+
+| Check actually executed | Result |
+| --- | --- |
+| Reproduction before local migration | `queue:failed` failed with missing `leggtix.failed_jobs`, exit `1`. |
+| Migration PHP syntax | Passed in the PHP 8.4 application container. |
+| Complete isolated MySQL suite with warnings treated as failures | **258 tests / 1,900 assertions passed**, 22.25 seconds, exit `0`. |
+| Final focused `FailedJobTest\|MigrationTest` suite | **4 tests / 52 assertions passed**, 0.78 seconds, exit `0`. |
+| Disposable-stack cleanup | Both test runs removed their scoped MySQL containers, networks and generated images. |
+| Normal local migration | Applied only the new failed-job migration with `--path`; all seven migrations are now `Ran`. A repeat reported `Nothing to migrate.`, exit `0`. Row counts and SHA-256 content fingerprints matched before/after for all six existing application tables, including reservation and token records. No row contents or tokens were printed. |
+| Previously failing live command | `queue:failed` now reports **`No failed jobs found.`** |
+| Current documentation | 44 local links resolved and 64 PowerShell blocks parsed across the six revised setup/design/manual guides. Patch formatting passed. |
+
+Current guides now require successful failed-job inspection and describe seven migrations. To repeat the user's acceptance check, run `docker compose exec app php artisan migrate:status` and expect all seven `Ran`, then `docker compose exec app php artisan queue:failed` and expect the empty result above with exit `0`. Other checkouts need `docker compose exec app php artisan migrate` before this check. No worker or seed data is required. Existing failed jobs, if any are created later, should be listed rather than discarded.
+
+The normal local table has already been installed. Repository edits remain uncommitted, with the pre-existing `.gitignore` change preserved. This fix does not complete the remaining browser/manual acceptance for issue #9; continue with the [morning checklist](issue-9-review-manual-checks.md). Hosted CI for this patch, actual Redis worker failure/retry behavior and browser checks were not run in this follow-up.

@@ -50,7 +50,9 @@ docker compose exec app php artisan migrate --seed
 
 Preparing the key before `up` ensures Compose loads it from `.env` when creating the app container. The initial dependency installation also makes Artisan available before the first migration.
 
-Open [http://localhost:8000/up](http://localhost:8000/up). Laravel's health endpoint should return a successful response. Migrations create `users`, `event_types`, `events`, `reservations`, `waitlist_entries`, and Sanctum's `personal_access_tokens`, alongside Laravel's migration history. Seeding adds the demo accounts, types and events below.
+Open [http://localhost:8000/up](http://localhost:8000/up). Laravel's health endpoint should return a successful response. Migrations create `users`, `event_types`, `events`, `reservations`, `waitlist_entries`, Sanctum's `personal_access_tokens` and Laravel's `failed_jobs`, alongside migration history. Seeding adds the demo accounts, types and events below.
+
+Redis holds pending queued work; MySQL stores failed-job records. After applying migrations, `docker compose exec app php artisan queue:failed` should report `No failed jobs found.` on a clean setup. Existing checkouts pick up new migrations with `docker compose exec app php artisan migrate`. The current booking flow dispatches no queued job and needs no queue worker.
 
 Open the [interactive API explorer](http://localhost:8000/docs/api) to browse requests, response schemas and errors, and send requests to the running app. Its [OpenAPI JSON](http://localhost:8000/docs/api.json) can also be imported into an API client. The explorer is available only in local/test environments with development dependencies installed.
 

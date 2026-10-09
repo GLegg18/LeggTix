@@ -33,7 +33,7 @@ docker compose exec app php artisan migrate:status
 (Invoke-WebRequest -UseBasicParsing http://localhost:8000/up).StatusCode
 ```
 
-Expect app/MySQL/Redis running, all six migrations `Ran`, and health `200`. No domain seeds or existing accounts are needed.
+Expect app/MySQL/Redis running, all seven migrations `Ran`, and health `200`. The current migrations include authentication tokens and failed-job storage alongside the five domain tables. No domain seeds or existing accounts are needed.
 
 ## 2. Run the isolated acceptance tests
 

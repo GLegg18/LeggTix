@@ -28,7 +28,7 @@ Use only this local checkout and development database. Docker Desktop must be ru
    docker compose exec app php -r "echo phpversion('redis'), PHP_EOL;"
    ```
 
-   Expect app/MySQL/Redis running, health `200`, and extension `6.3.0`. `up -d` recreates the app when the rebuilt image changes. Preserve an existing `.env` and key. No seeding, database reset or queue worker is required.
+   Expect app/MySQL/Redis running, health `200`, and extension `6.3.0`. Migrations include the five domain tables, authentication tokens and failed-job storage. `up -d` recreates the app when the rebuilt image changes. Preserve an existing `.env` and key. No seeding, database reset or queue worker is required.
 
 2. **Run the isolated MySQL suite and confirm cleanup.**
 
@@ -161,7 +161,7 @@ Use only this local checkout and development database. Docker Desktop must be ru
    docker compose exec app php artisan queue:failed
    ```
 
-   Expect `PASS Redis-login-throttle`, HTTP/authentication/payload/real-multipart checks, booking/replay/capacity/FIFO checks, Redis actor throttling, persisted invariants, and all-zero fixture cleanup; exit code `0`. The runner creates and removes its own separate tagged fixtures. Localhost's IP limits are shared, so allow a fresh minute after heavy manual testing. Logs must not show an unexpected exception during these requests. Booking dispatches no queue job; `queue:failed` may report the absent failed-job table at this milestone. No queue worker is needed. If the live runner reports cleanup failure, copy its printed recovery command exactly.
+   Expect `PASS Redis-login-throttle`, HTTP/authentication/payload/real-multipart checks, booking/replay/capacity/FIFO checks, Redis actor throttling, persisted invariants, and all-zero fixture cleanup; exit code `0`. The runner creates and removes its own separate tagged fixtures. Localhost's IP limits are shared, so allow a fresh minute after heavy manual testing. Logs must not show an unexpected exception during these requests. Expect `queue:failed` to report `No failed jobs found.` on a clean setup. A missing-table exception requires applying pending migrations with `docker compose exec app php artisan migrate`, then repeating the check. Existing failed jobs should be inspected separately. Booking dispatches no queue job and needs no queue worker. If the live runner reports cleanup failure, copy its printed recovery command exactly.
 
 10. **Remove only the manual walkthrough's fixtures and tokens.** From the same repository-root PowerShell window:
 

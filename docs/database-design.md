@@ -38,6 +38,8 @@ The last decision interprets the spec's promotion as a free reservation, with jo
 
 ## Schema conventions
 
+Laravel infrastructure adds `personal_access_tokens` for authentication and `failed_jobs` for the configured database failed-job provider. Pending jobs use Redis. These infrastructure tables sit outside the five domain tables shown in the ER diagram.
+
 - Primary keys are auto-incrementing `BIGINT UNSIGNED`; foreign keys use the same type. Numeric IDs are adequate for this local API and never substitute for authorization.
 - Use InnoDB, `utf8mb4`, and the project's configured collation. Use explicit, named foreign keys, unique indexes, and enforced `CHECK` constraints. Stable status/role slugs are `VARCHAR` with PHP backed enums and matching database checks; editable event types use rows.
 - All five tables have non-null `created_at` and `updated_at` as UTC `DATETIME(6)`. Other instants use the same representation. Set application/database session time to UTC, and convert for display using the event's IANA `timezone`. Validate offsets and daylight-saving ambiguities when accepting local times.

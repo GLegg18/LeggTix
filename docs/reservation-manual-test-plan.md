@@ -37,7 +37,7 @@ Expect `PASS` lines for HTTP/authentication/payload/real multipart checks, exact
    docker compose exec app php artisan route:list --path=reservations
    ```
 
-   Expect `linux`, app/MySQL/Redis containers running, the six existing migrations marked `Ran`, health `200`, and `POST api/events/{event}/reservations`. Preserve an existing `.env`; never regenerate an existing application key for this walkthrough. If port `8000` is occupied, stop the conflicting local service before starting this stack. Existing domain seed data is not needed.
+   Expect `linux`, app/MySQL/Redis containers running, all seven migrations marked `Ran`, health `200`, and `POST api/events/{event}/reservations`. Preserve an existing `.env`; never regenerate an existing application key for this walkthrough. If port `8000` is occupied, stop the conflicting local service before starting this stack. Existing domain seed data is not needed.
 
 2. **Run the isolated acceptance suite, including actual overlapping transactions.**
 
@@ -195,7 +195,7 @@ Expect `PASS` lines for HTTP/authentication/payload/real multipart checks, exact
     docker compose exec app php artisan queue:failed
     ```
 
-    Expect no reservation queue job; booking has no notification side effect in this milestone. `queue:failed` may report an absent failed-job table because this stack does not yet install a queue-workflow schema; this does not indicate a failed booking. A busy reservation returns `503`, `code: reservation_busy`, with `Retry-After: 1`; it must not return `full`. Automated checks cover both an injected database exception and real isolated MySQL lock-timeout exhaustion; the live walkthrough does not intentionally force a deadlock. Actor booking requests are limited to 30/minute and IP requests to 120/minute. If troubleshooting creates `429`, wait for its `Retry-After` before continuing.
+    Expect `No failed jobs found.` on a clean local setup; a missing-table exception is a setup failure. If `failed_jobs` is absent, apply pending migrations with `docker compose exec app php artisan migrate` and repeat the command. Booking has no notification side effect and needs no queue worker in this milestone. If existing failed jobs are listed, inspect them separately; their presence alone does not establish a failed booking. A busy reservation returns `503`, `code: reservation_busy`, with `Retry-After: 1`; it must not return `full`. Automated checks cover both an injected database exception and real isolated MySQL lock-timeout exhaustion; the live walkthrough does not intentionally force a deadlock. Actor booking requests are limited to 30/minute and IP requests to 120/minute. If troubleshooting creates `429`, wait for its `Retry-After` before continuing.
 
 11. **Remove only this walkthrough's fixtures and revoke its tokens.** Keep `$issue9Fixture` from step 3. This block uses only those captured IDs, guards the local environment and checks counts afterwards:
 

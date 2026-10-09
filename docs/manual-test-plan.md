@@ -39,7 +39,7 @@ docker compose exec redis redis-cli ping
 docker compose exec app php artisan migrate:status
 ```
 
-**Expected:** all six migrations say `Ran`. They create users, event types, events, reservations, waitlist entries and authentication tokens.
+**Expected:** all seven migrations say `Ran`. They create users, event types, events, reservations, waitlist entries, authentication tokens and failed-job storage. If an existing checkout shows a pending migration, run `docker compose exec app php artisan migrate`, then check the status again.
 
 ## 3. Run the automated tests
 
@@ -270,7 +270,7 @@ This stops the services and keeps the database data. Leave the containers runnin
 
 ## What a complete pass means
 
-- Three running containers; app health `200`; Redis `PONG`; six migrations `Ran`.
+- Three running containers; app health `200`; Redis `PONG`; seven migrations `Ran`.
 - Automated suite: all tests passed; use the latest verification report for the recorded test and assertion counts.
 - Register `201`; current user/login `200`; logout `204`.
 - Guest/old token `401`; invalid input/privilege attempt `422`; excessive attempts `429`.
