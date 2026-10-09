@@ -2,7 +2,7 @@
 
 These checks cover login identity throttling, fresh booking state, stable race verification, CI and the pinned Redis extension. Event discovery, cancellation and waitlist promotion retain their separate tickets. This checklist complements the [full reservation walkthrough](reservation-manual-test-plan.md); issue #9 should remain open until its remaining acceptance work is agreed.
 
-Use only this local checkout and development database. Docker Desktop must be running with Linux containers and Compose v2 or newer. Open PowerShell and keep the same window for steps 4-10: its variables contain the captured fixture IDs and private tokens. PHP, Composer, MySQL and Redis run in Docker; Windows does not need separate installations. PowerShell 7 is needed only for its additional wrapper check. The first image build needs network access.
+Use only this local checkout and development database. Docker Desktop must be running with Linux containers and Compose v2 or newer. Open PowerShell and keep the same window for steps 4-10: its variables contain the captured fixture IDs and private tokens. PHP, Composer, MySQL and Redis run in Docker; Windows does not need separate installations. Windows PowerShell is sufficient for this checklist. The first image build needs network access.
 
 1. **Prepare the local app and confirm the rebuilt runtime.** Run from the repository root:
 
@@ -30,21 +30,17 @@ Use only this local checkout and development database. Docker Desktop must be ru
 
    Expect app/MySQL/Redis running, health `200`, and extension `6.3.0`. `up -d` recreates the app when the rebuilt image changes. Preserve an existing `.env` and key. No seeding, database reset or queue worker is required.
 
-2. **Confirm repeatable isolated verification and test-runner cleanup.**
+2. **Run the isolated MySQL suite and confirm cleanup.**
 
    ```powershell
-   powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\tests\Test-TestRunner.ps1
-   pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\tests\Test-TestRunner.ps1
-   powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1 --filter=AuthenticationTest --display-warnings --fail-on-warning
-   powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1 --filter=ReservationBookingTest --display-warnings --fail-on-warning
-   powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1 --filter=ReservationConcurrencyTest --display-warnings --fail-on-warning
+   powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1 --display-warnings --fail-on-warning
    ```
 
-   Expect 14 wrapper cases per shell, no configuration changes, then passing MySQL tests and successful disposable-stack cleanup. If `pwsh` is absent, record that prerequisite and run its check after installing PowerShell 7. Authentication covers equivalent known-account spellings sharing a budget, distinct accounts, invalid email without database lookups, unknown-account fallback and the overall IP limit. Booking includes a returned event whose counter and timestamp match fresh persisted state. All eight concurrency cases use independent PHP/MySQL processes; the cutoff case establishes the start time after the competitor is waiting at the lock. Slow process startup must not decide the result. These commands do not migrate the normal application database. For final sign-off, run the complete command without `--filter`; see [testing.md](testing.md).
+   Expect passing MySQL tests and successful disposable-stack cleanup. Authentication covers equivalent known-account spellings sharing a budget, distinct accounts, invalid email without database lookups, unknown-account fallback and the overall IP limit. Booking includes a returned event whose counter and timestamp match fresh persisted state. All eight concurrency cases use independent PHP/MySQL processes; the cutoff case establishes the start time after the competitor is waiting at the lock. Slow process startup must not decide the result. This command does not migrate the normal application database. The optional local helper checks are documented in [testing.md](testing.md).
 
-3. **Confirm the first hosted workflow and merge protection separately.** After the changes have been pushed, open [GitHub Actions](https://github.com/GLegg18/LeggTix/actions), select **Tests**, and open the run for the exact commit being reviewed. Expect three green jobs: `MySQL acceptance`, `Windows wrapper (powershell)`, `Windows wrapper (pwsh)`. Expand `Run isolated MySQL tests` and confirm tests pass and the temporary project is removed. Open each Windows job and confirm `14 wrapper cases passed; 0 failed.`
+3. **Confirm the hosted workflow and merge protection separately.** After the changes have been pushed, open [GitHub Actions](https://github.com/GLegg18/LeggTix/actions), select **Tests**, and open the run for the exact commit being reviewed. Expect one green job: `MySQL acceptance`. Expand `Run isolated MySQL tests` and confirm the full suite passes. Expand `Clean up test stack` and confirm the temporary project is removed.
 
-   A locally passing suite or valid workflow file does not establish hosted execution. If no run exists, the pending action is to push the workflow and check its first run. Ask the repository administrator to require these three statuses on the intended protected merge branch or ruleset, then verify a failing required status blocks merging. Record that as pending until configured; a workflow alone does not enforce the gate.
+   A locally passing suite or valid workflow file does not establish hosted execution. If no run exists for the revised workflow, push the change and check its run. Require `MySQL acceptance` on the intended protected merge branch or ruleset, removing the old Windows wrapper requirements if configured, then verify a failing required status blocks merging. Record that as pending until configured; a workflow alone does not enforce the gate.
 
 4. **Create tagged fixtures for the live requests and capture cleanup information.**
 

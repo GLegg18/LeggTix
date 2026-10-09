@@ -12,18 +12,20 @@ The execution-policy override applies only to this PowerShell process. If your p
 
 ## Continuous integration
 
-[The Tests workflow](../.github/workflows/tests.yml) runs on pushes and pull requests, and supports manual dispatch. `MySQL acceptance` runs the same disposable Compose suite on a Linux runner with PowerShell 7. `Windows wrapper (powershell)` and `Windows wrapper (pwsh)` exercise the runner's success, failure, argument forwarding and cleanup cases on Windows, using a mock Docker command rather than a Windows database stack. The checkout action is pinned to a reviewed commit with read-only repository permissions and credential persistence disabled.
+[The Tests workflow](../.github/workflows/tests.yml) runs on pushes and pull requests, and supports manual dispatch. Its single `MySQL acceptance` job uses Bash and Docker Compose directly on a Linux runner. It builds the Dockerfile's test target and runs the complete suite against disposable MySQL, with warnings treated as failures. PHP, Composer and MySQL run inside the containers; PowerShell is only a local Windows convenience. The checkout action is pinned to a reviewed commit with read-only repository permissions and credential persistence disabled.
 
-These jobs become available after the workflow is pushed. Their first hosted execution must still be checked. To prevent merging failing changes, configure the protected branch or ruleset to require these three status checks; committing a workflow alone does not enforce branch protection.
+Each workflow run and attempt has its own Compose project. An `always()` cleanup step removes that project's containers, network, volumes and generated image even when building or testing fails. Test and cleanup failures both fail the job. The test configuration needs no host `.env` or installed dependencies and publishes no ports.
 
-Run the wrapper checks locally without starting Docker:
+After pushing workflow changes, check the run for that exact commit. To prevent merging failing changes, configure the protected branch or ruleset to require `MySQL acceptance`; committing a workflow alone does not enforce branch protection. Remove the old `Windows wrapper (powershell)` and `Windows wrapper (pwsh)` requirements if they were configured.
+
+When changing the local PowerShell helper, optionally run its success, failure, argument forwarding and cleanup checks without starting Docker:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\tests\Test-TestRunner.ps1
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\tests\Test-TestRunner.ps1
 ```
 
-Expect 14 passing cases per shell and unchanged application configuration. The Dockerfile pins the PHP Redis extension to `6.3.0`; update that version deliberately when rebuilding the runtime.
+Expect 14 passing cases per shell and unchanged application configuration. Run the second command only if PowerShell 7 is installed; it is not a prerequisite for application acceptance or CI. These checks use a mock Docker command. The Dockerfile pins the PHP Redis extension to `6.3.0`; update that version deliberately when rebuilding the runtime.
 
 To run just the authentication tests:
 

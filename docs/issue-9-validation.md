@@ -124,6 +124,8 @@ The final PHPUnit result remains 248 tests / 1,804 assertions from the prior mil
 
 ## Repository-review follow-up — 8 October 2026
 
+This section records the checks and pending work at that point. The 9 October CI follow-up below supersedes its Linux/Windows workflow and required-status instructions.
+
 The user requested the five technical review findings and documentation drift be addressed through the developer, tester and security reviewer flow. Event discovery, management, cancellation and waitlist workflows retain their existing tickets and were excluded from this follow-up. GitHub issue #9 was read through the connector: it remains open, with its six acceptance boxes checked. No issue, PR, branch setting or remote content was changed; manual acceptance remains with the user.
 
 ### Fixes and decisions
@@ -170,4 +172,24 @@ Existing email matching, database schema, public response fields, five/account/I
 3. After publishing this branch/workflow, verify its first hosted Linux/Windows jobs and configure `MySQL acceptance`, `Windows wrapper (powershell)` and `Windows wrapper (pwsh)` as required checks on the intended merge branch. These repository settings were not changed.
 4. Keep #9 open until the user has reviewed the remaining acceptance evidence. No new feature milestone is required by these fixes. Cross-IP account abuse policy is public-launch work; larger bursts, deliberate deadlock cycles, query/latency measurements and multi-server/future-workflow races retain the existing broader testing tickets.
 
-All changes remain local and uncommitted on `LT-9-Event-Reservations`. The user's pre-existing `.gitignore` modification is preserved. No commit, push, PR creation, issue mutation, deployment or application database reset was performed.
+At the end of that follow-up, changes were local and uncommitted on `LT-9-Event-Reservations`.
+
+## CI simplification follow-up — 9 October 2026
+
+The user published the previous changes as `78c3c2f562a7e7c3ee2751bfcd6d99240288864c`, then reported the failing [first hosted workflow](https://github.com/GLegg18/LeggTix/actions/runs/37858162133). GitHub job logs confirm `MySQL acceptance` succeeded on Linux: **255 tests / 1,867 assertions**, 21.73 seconds, followed by successful cleanup. Both Windows wrapper jobs failed only `MissingDocker`, finishing with 13 passing cases and one failure each. The test fixture retained `System32` in its child PATH, where the hosted runner had a real Docker CLI; the supposed missing-command case instead reached Compose and a stopped engine.
+
+The coordinator simplified the workflow to one Ubuntu `MySQL acceptance` job using Bash and Docker Compose directly. It builds the existing test image, runs the full MySQL suite with warnings treated as failures, and always attempts cleanup in a separate step. Run ID and attempt identify the disposable project; both steps explicitly select the same project and test Compose file. Test or cleanup failure fails the job. Read-only permissions, pinned checkout and disabled persisted credentials remain. PowerShell helpers are local Windows conveniences; no Windows runner or PowerShell installation is required by CI. Current guides and the morning checklist now describe this arrangement.
+
+**Tester — fixed:** Restricted each mock wrapper child's PATH to its own fixture directory. Absolute shell paths and COMSPEC keep the mock executable usable. A temporary fake `SystemRoot/System32/docker.cmd` trap reproduced the old failure without modifying actual Windows system files; the identical probe after the fix returned the missing-Docker diagnostic without invoking Docker. Both complete shell harnesses passed. No application, database or browser checks were performed by this agent.
+
+**Security reviewer:** No actionable issue in workflow permissions, project isolation, failure propagation, cleanup, revised harness or current CI instructions. The reviewer performed source and patch checks only. **Delivery reviewer:** Confirmed the test configuration is self-contained, required directory placeholders are tracked and Compose configuration validates. The coordinator implemented the CI/documentation change; a separate developer agent was not used for this focused follow-up.
+
+| Check actually executed | Result |
+| --- | --- |
+| Direct Compose acceptance command from the revised workflow, invoked locally against Linux containers | **255 tests / 1,867 assertions passed**, 24.05 seconds, exit `0`. No PowerShell test wrapper invoked. |
+| Scoped cleanup | Disposable project `leggtix-ci-local-a01f0b1bec074d2699efbb1a46503765` removed its MySQL container, network and generated test image. |
+| Local Windows PowerShell and PowerShell 7 harnesses | **14 cases passed / zero failed per shell**, exit `0`, application configuration unchanged. |
+| Workflow lint | `rhysd/actionlint:1.7.12` passed, exit `0`, with only workflow text supplied to an isolated no-network container. |
+| Documentation and patch | 35 local links resolved and 30 PowerShell blocks parsed across the three revised current guides. Patch formatting passed. |
+
+The revised workflow has not been published or executed on GitHub. After publication, select its exact commit in Actions and expect one green `MySQL acceptance` job, passing tests and a successful `Clean up test stack` step. If branch protection was configured, require only `MySQL acceptance` and remove both obsolete Windows wrapper requirements. Repository settings were not changed. Issue #9 remains open; the browser, real HTTP recovery and broader checks listed in the [morning checklist](issue-9-review-manual-checks.md) still apply. No browser or deployment verification was repeated. These follow-up edits remain uncommitted; the pre-existing `.gitignore` change is preserved.

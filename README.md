@@ -62,7 +62,7 @@ The [authentication guide](docs/authentication.md) and [booking guide](docs/rese
 
 After migrating, use the [testing guide](docs/testing.md) for the isolated Docker runner and the [manual acceptance checks](docs/manual-test-plan.md) for the live app walkthrough and expected results.
 
-The [Tests workflow](.github/workflows/tests.yml) runs MySQL acceptance on Linux and test-runner regressions under both Windows PowerShell and PowerShell 7 on pushes and pull requests. The [testing guide](docs/testing.md#continuous-integration) explains hosted checks and configuring required statuses.
+The [Tests workflow](.github/workflows/tests.yml) runs MySQL acceptance on Linux using Docker Compose directly on pushes and pull requests. PowerShell is a convenience for local Windows testing. The [testing guide](docs/testing.md#continuous-integration) explains the hosted check and configuring its required status.
 
 To stop the services while keeping the MySQL data, run `docker compose down`.
 
