@@ -16,6 +16,8 @@ The [review follow-up checklist](issue-9-review-manual-checks.md) covers equival
 
 The [testing guide](testing.md) explains the disposable Docker runner, argument forwarding, cleanup and troubleshooting. Follow the [manual acceptance checks](manual-test-plan.md) for copy/paste PowerShell steps and expected responses from the live app.
 
+The [local email preview guide](../README.md#local-email-preview) documents Mailpit's inbox, Laravel SMTP configuration and the isolated queued-mail smoke check. The [issue #4 verification report](issue-4-validation.md) records acceptance, security review and manual checks for that local service.
+
 The [issue #5 verification report](issue-5-validation.md) records executed checks, review findings and verification limits. The guides describe how to repeat the checks; the report records what was verified.
 
 The [local demo setup](../README.md#demo-data-and-login) gives local-only customer/organiser/admin credentials, sample events and confirmed reservations. The [issue #3 verification report](issue-3-validation.md) records acceptance checks, the manual plan and the cancellation/waitlist history dependencies. The [earlier demo report](demo-data-validation.md) records the original six-event dataset.
