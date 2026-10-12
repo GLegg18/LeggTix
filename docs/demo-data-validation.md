@@ -1,5 +1,7 @@
 # Local demo seeders verification report
 
+This is the historical report for the original six-event dataset. See the [issue #3 verification report](issue-3-validation.md) and [current demo setup](../README.md#demo-data-and-login) for the extended dataset with an admin account and confirmed bookings.
+
 Verified on 8 October 2026. This records the reviewer-friendly demo seeders requested after issue #6; [README setup and credentials](../README.md#demo-data-and-login) is the user guide. The earlier [issue #6 report](issue-6-validation.md) records the event model milestone before these additions.
 
 ## Changes and assumptions

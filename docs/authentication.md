@@ -41,7 +41,7 @@ Validation errors and invalid login credentials return Laravel's `422` JSON shap
 - Registration and login both trim/lowercase email before validation and lookup. The model normalizes email on write too. A unique database index is the final duplicate-account guard.
 - Registration requires matching password confirmation and at least eight characters. Passwords are at most 72 **bytes** and cannot contain null bytes, on registration and login. The byte limit prevents bcrypt from treating different long passwords as the same secret; multibyte characters can use several bytes each. Passwords are not trimmed.
 - Registration always creates `regular_user`. Supplying a nonempty `role` is rejected; other unexpected fields cannot assign IDs, hashes, timestamps or privileges. `role` is excluded from model mass assignment and cast to `UserRole`.
-- Trusted factories can create `organiser` and `admin` users for tests. The local/testing demo seeder creates a regular user and an organiser, as described in the [demo setup](../README.md#demo-data-and-login); it creates no admin or access token. Public role management, password reset and email verification remain separate work.
+- Trusted factories can create `organiser` and `admin` users for tests. The local/testing demo seeder creates three regular users, an organiser and an admin, as described in the [demo setup](../README.md#demo-data-and-login); these known credentials are local-only and no access tokens are seeded. Public role management, password reset and email verification remain separate work.
 
 ## Token lifecycle
 

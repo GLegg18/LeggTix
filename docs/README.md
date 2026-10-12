@@ -18,7 +18,7 @@ The [testing guide](testing.md) explains the disposable Docker runner, argument 
 
 The [issue #5 verification report](issue-5-validation.md) records executed checks, review findings and verification limits. The guides describe how to repeat the checks; the report records what was verified.
 
-The [local demo setup](../README.md#demo-data-and-login) gives seeded customer/organiser credentials and sample event data. The [demo data verification report](demo-data-validation.md) records seeder acceptance checks and the manual plan.
+The [local demo setup](../README.md#demo-data-and-login) gives local-only customer/organiser/admin credentials, sample events and confirmed reservations. The [issue #3 verification report](issue-3-validation.md) records acceptance checks, the manual plan and the cancellation/waitlist history dependencies. The [earlier demo report](demo-data-validation.md) records the original six-event dataset.
 
 Read [reservation races](reservation-races.md) for two-customer timelines covering the last place, the same named seat, cancellation and retry behaviour. The [ticketing extension plan](ticketing-extensions.md) adds staged diagrams and research for venues, seating, organiser teams, overlapping roles and payments. It links future GitHub tickets separately from the MVP work.
 
