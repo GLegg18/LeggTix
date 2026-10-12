@@ -50,7 +50,7 @@ docker compose exec app php artisan migrate --seed
 
 Preparing the key before `up` ensures Compose loads it from `.env` when creating the app container. The initial dependency installation also makes Artisan available before the first migration.
 
-Open [http://localhost:8000/up](http://localhost:8000/up). Laravel's health endpoint should return a successful response. Migrations create `users`, `event_types`, `events`, `reservations`, `waitlist_entries`, Sanctum's `personal_access_tokens` and Laravel's `failed_jobs`, alongside migration history. Seeding adds the demo accounts, types and events below.
+Open [http://localhost:8000/up](http://localhost:8000/up). Laravel's health endpoint should return a successful response. Migrations create `users`, `event_types`, `events`, `reservations`, `waitlist_entries`, Sanctum's `personal_access_tokens` and Laravel's `failed_jobs`, alongside migration history. Seeding adds the demo accounts, types, events and reservations below.
 
 Redis holds pending queued work; MySQL stores failed-job records. After applying migrations, `docker compose exec app php artisan queue:failed` should report `No failed jobs found.` on a clean setup. Existing checkouts pick up new migrations with `docker compose exec app php artisan migrate`. The current booking flow dispatches no queued job and needs no queue worker.
 
@@ -76,14 +76,17 @@ For an already migrated local app, add the sample data with:
 docker compose exec app php artisan db:seed
 ```
 
-Both demo accounts use **`demo-password`** when first created:
+All five demo accounts use **`demo-password`** when first created:
 
 | Account | Email | Role |
 | --- | --- | --- |
 | Demo User | `demo.user@example.test` | `regular_user` |
 | Demo Organiser | `demo.owner@example.test` | `organiser` |
+| Demo Admin | `demo.admin@example.test` | `admin` |
+| Demo Attendee One | `demo.attendee.one@example.test` | `regular_user` |
+| Demo Attendee Two | `demo.attendee.two@example.test` | `regular_user` |
 
-These are local review credentials. The demo seeder runs only with `APP_ENV=local` or `testing`; other environments are rejected even with `--force`. Seeding creates no admin account or access token. Use the ordinary login endpoint, for example in PowerShell:
+These are local review credentials, including the privileged admin account, and must never be used for production. The demo seeder runs only with `APP_ENV=local` or `testing`; other environments are rejected even with `--force`. It creates no access token. Use the ordinary login endpoint, for example in PowerShell:
 
 ```powershell
 $demoLogin = Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/login -ContentType 'application/json' -Body (@{
@@ -95,18 +98,20 @@ $demoLogin.user
 
 Expect the customer profile and role `regular_user`. Change the email to `demo.owner@example.test` to log in as the organiser. The response also contains the bearer token described in the [authentication guide](docs/authentication.md).
 
-Three active types (`concert`, `workshop`, `meetup`) and six organiser-owned events are created:
+Five active types (`concert`, `live-show`, `film-screening`, `workshop`, `meetup`) and eight organiser-owned events are created. Existing workshop/meetup fixtures remain available for older local checkouts.
 
-| Event | Type | Status | Schedule at creation | Capacity |
-| --- | --- | --- | --- | --- |
-| Demo: Riverside Acoustic Night | concert | published | 14 days ahead | 120 |
-| Demo: Laravel Makers Workshop | workshop | published | 21 days ahead | 24 |
-| Demo: Community Coffee Meetup | meetup | draft | 28 days ahead | 40 |
-| Demo: Garden Session | concert | cancelled | 35 days ahead | 80 |
-| Demo: Intro to Web APIs | workshop | completed | 14 days ago | 20 |
-| Demo: Last Week's Community Meetup | meetup | published | 7 days ago | 30 |
+| Event | Type | Status | Schedule at creation | Capacity | Confirmed |
+| --- | --- | --- | --- | --- | --- |
+| Demo: Riverside Acoustic Night | concert | published | 14 days ahead | 120 | 1 |
+| Demo: Laravel Makers Workshop | workshop | published | 21 days ahead | 24 | 0 |
+| Demo: Community Coffee Meetup | meetup | draft | 28 days ahead | 40 | 0 |
+| Demo: Garden Session | concert | cancelled | 35 days ahead | 80 | 0 |
+| Demo: Intro to Web APIs | workshop | completed | 14 days ago | 20 | 0 |
+| Demo: Last Week's Community Meetup | meetup | published | 7 days ago | 30 | 0 |
+| Demo: Studio Live Showcase | live-show | published | 18 days ahead | 2 | 2 |
+| Demo: Independent Film Screening | film-screening | published | 25 days ahead | 30 | 0 |
 
-Schedules are UTC instants with `Europe/London` as the display timezone. Every new event has zero confirmed occupancy and no reservation/waitlist fixtures. The past published event demonstrates the start-time cutoff. Event APIs and management UI are still follow-on work; these rows are ready for database/model inspection without manually creating fixtures in Tinker.
+Schedules are UTC instants with `Europe/London` as the display timezone. A fresh dataset has three confirmed reservations: Demo User holds one place at Riverside Acoustic Night, and the two Demo Attendees fill Studio Live Showcase. Each booking uses the ordinary reservation action and its MySQL transaction/locking rules; `confirmed_count` equals the number of confirmed reservations. The past published event demonstrates the start-time cutoff. No waitlist entries or cancelled/rebooked attempts are generated: those history scenarios depend on the cancellation, join/leave and promotion workflows in [#10](https://github.com/GLegg18/LeggTix/issues/10), [#13](https://github.com/GLegg18/LeggTix/issues/13) and [#14](https://github.com/GLegg18/LeggTix/issues/14). Event management and discovery endpoints remain follow-on work.
 
 To find a published future event ID for a Swagger booking request:
 
@@ -114,11 +119,13 @@ To find a published future event ID for a Swagger booking request:
 docker compose exec app php artisan tinker --execute="dump(App\Models\Event::query()->where('status', 'published')->whereRaw('starts_at > UTC_TIMESTAMP(6)')->get(['id', 'name', 'capacity', 'confirmed_count'])->toArray());"
 ```
 
-A fresh demo has two matching events. Copy an `id` into the reservation operation's `event` parameter and send `{}`. A first booking returns `201`; repeating it with the same account returns `409 already_reserved`.
+A fresh demo has four matching events. Log in as Demo User and choose Independent Film Screening for a successful `201` booking; repeating it returns `409 already_reserved`. Studio Live Showcase returns `409 full` for Demo User. Riverside Acoustic Night already has Demo User's reservation, so it returns `409 already_reserved` immediately. Copy the chosen event's `id` into the reservation operation's `event` parameter and send `{}`.
 
-Rerunning creates missing fixtures and preserves existing passwords, edits, dates, retired types and booking history. Fixture identities are the demo emails, type slugs and owner/event names: changing an identity or deleting a sample can cause its original to be created again. The seeder refuses conflicting account roles and new events that would use a retired type, rolling back the run. It does not reset existing credentials or move old events into the future; use the explicit local reset below for a fresh demo.
+Rerunning creates missing fixtures and preserves existing passwords, edits, dates, retired types and booking history. It also upgrades the earlier six-event dataset by adding the new accounts, types, events and missing demo bookings. A demo booking is added only when that event/user pair has no reservation or waitlist history; a cancelled booking or a former waiter is never automatically booked again. Fixture identities are the demo emails, type slugs and owner/event names: changing an identity or deleting a sample can cause its original to be created again.
 
-The [demo data verification report](docs/demo-data-validation.md) records checks, review outcomes and a short manual plan.
+Conflicting account roles, new events requiring retired types, inconsistent occupancy, or a missing demo booking that cannot be allocated abort the whole seed transaction. Existing data is never silently repaired to force the demo into place. The seeder does not reset credentials or move old events into the future. An unchanged seeded dataset can be replayed after its events pass; an older unbooked event may require the explicit local reset below before its missing demo booking can be created. Reset only when you intend to delete local records.
+
+The [issue #3 verification report](docs/issue-3-validation.md) records checks, review outcomes, deferred history scenarios and a short manual plan. The [earlier demo report](docs/demo-data-validation.md) records the original six-event dataset.
 
 ## Reset local data
 
@@ -182,7 +189,7 @@ Controllers should validate requests and coordinate small action/service classes
 
 Registration creates only `regular_user` accounts. Login issues a Laravel Sanctum token that expires after 24 hours; logout revokes the current token. The [authentication guide](docs/authentication.md) documents validation, response contracts, token handling, and rate limits.
 
-The [MVP schema](docs/database-design.md) is implemented with MySQL constraints, generated active uniqueness keys, restricted foreign keys, and UTC `DATETIME(6)` domain timestamps. [Event models and factories](docs/events.md) provide ownership/type relationships, typed lifecycle statuses, scheduling and fixture states for issue #6. Local demo seeders provide the review accounts and sample types/events above.
+The [MVP schema](docs/database-design.md) is implemented with MySQL constraints, generated active uniqueness keys, restricted foreign keys, and UTC `DATETIME(6)` domain timestamps. [Event models and factories](docs/events.md) provide ownership/type relationships, typed lifecycle statuses, scheduling and fixture states for issue #6. Local demo seeders provide the review accounts, sample types/events and confirmed reservations above.
 
 [Reservation creation](docs/reservations.md) locks the current event row in MySQL, checks eligibility and duplicate/waiting state, and commits a guarded occupancy increment with a fresh attempt. Competing bookings for one event serialize through that lock; cached availability cannot claim a place. All inventory writers must follow this protocol. Direct SQL can break counter/row equality, and this milestone makes no throughput guarantee. Existing waiters block newcomer allocation until promotion is implemented. The [issue #9 validation report](docs/issue-9-validation.md) records the independent MySQL race checks and their limits.
 
