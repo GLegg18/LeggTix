@@ -6,13 +6,13 @@ Copy one code block at a time, press Enter, then compare the result with the **E
 
 Allow about 15 minutes, plus downloads on the first test run. This checks the implemented authentication and schema. Booking is covered by the [reservation acceptance plan](reservation-manual-test-plan.md); waitlist endpoints remain later work.
 
-## 1. Check the three containers
+## 1. Check the five containers
 
 ```powershell
 docker compose ps
 ```
 
-**Expected:** `app`, `mysql` and `redis` are running. MySQL and Redis should say `healthy`.
+**Expected:** `app`, `mysql`, `redis`, `mailpit` and `worker` are running. The first four should say `healthy`; the worker processes the `emails` queue.
 
 If they are stopped, run this and check again:
 
@@ -39,7 +39,7 @@ docker compose exec redis redis-cli ping
 docker compose exec app php artisan migrate:status
 ```
 
-**Expected:** all seven migrations say `Ran`. They create users, event types, events, reservations, waitlist entries, authentication tokens and failed-job storage. If an existing checkout shows a pending migration, run `docker compose exec app php artisan migrate`, then check the status again.
+**Expected:** all eight migrations say `Ran`. They create users, event types, events, reservations, waitlist entries, authentication tokens, failed-job storage and temporary registration email verifications. If an existing checkout shows a pending migration, run `docker compose exec app php artisan migrate`, then check the status again.
 
 ## 3. Run the automated tests
 
@@ -47,7 +47,7 @@ docker compose exec app php artisan migrate:status
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1
 ```
 
-**Expected:** all tests pass. The [demo data verification report](demo-data-validation.md) records the latest suite size and results; runtime varies by machine.
+**Expected:** all tests pass. The [email and registration verification report](issue-4-email-validation.md) records the current suite size and results; runtime varies by machine.
 
 The script makes a fresh test database, runs migrations and creates the test fixtures, then removes its temporary containers and database. No manual database creation, root password or `.env` change is needed. The execution-policy override applies only to this PowerShell process. The first run downloads and builds dependencies; the build output is normal.
 
@@ -62,7 +62,7 @@ docker compose ps
 curl.exe -sS -i http://localhost:8000/api/health
 ```
 
-**Expected:** your usual `app`, `mysql` and `redis` containers are still running; app health returns `200` and `{"status":"ok"}`. The test run uses a separate stack and leaves your application data alone.
+**Expected:** your usual five containers are still running; app health returns `200` and `{"status":"ok"}`. The test run uses a separate stack and leaves your application data alone.
 
 ## 5. Set up a fresh demo account
 
@@ -74,17 +74,63 @@ $qaSuffix = [guid]::NewGuid().ToString('N').Substring(0, 8)
 $qaEmail = "qa-$qaSuffix@example.test"
 $qaPassword = 'local-demo-password'
 
-$qaRegisterBody = @{
+$qaRegisterFields = @{
     name = 'Demo Customer'
     email = "  $($qaEmail.ToUpperInvariant())  "
     password = $qaPassword
     password_confirmation = $qaPassword
-} | ConvertTo-Json
+}
 ```
 
 **Expected:** no output. That is fine: PowerShell saved the values. The random email makes this walkthrough repeatable.
 
-## 6. Register
+## 6. Verify the mailbox, then register
+
+Registration requires email ownership first. This local app sends to Mailpit, which captures `.test` addresses without sending to real recipients. No user, password or access token is created by requesting a code.
+
+First prove that direct registration is refused:
+
+```powershell
+$qaRegisterFields | ConvertTo-Json | curl.exe -sS -i -H 'Content-Type: application/json' --data-binary '@-' "$qaBase/api/register"
+```
+
+**Expected:** `422` with an error under `registration_token`. No welcome email arrives.
+
+Request a code:
+
+```powershell
+$qaChallengeResponse = Invoke-WebRequest -UseBasicParsing -Method Post -Uri "$qaBase/api/registration/email-verifications" -ContentType 'application/json' -Body (@{ email = $qaEmail } | ConvertTo-Json)
+$qaChallenge = $qaChallengeResponse.Content | ConvertFrom-Json
+$qaChallengeResponse.StatusCode
+$qaChallenge.challenge_id
+$qaChallenge.expires_at
+```
+
+**Expected:** `202`, an opaque 64-character challenge ID and an expiry about ten minutes ahead. The response must not contain the code or a registration token.
+
+Open **http://localhost:8025** in a browser. Enter the value of `$qaEmail` in the inbox search box, open **Verify your email for LeggTix**, and copy its six-digit code. The request reference must match `$qaChallenge.challenge_id`. If the inbox is empty, wait a few seconds; if still empty after 30 seconds, inspect `docker compose logs --tail 60 worker`. Do not request repeated codes while diagnosing: a resend rotates the code and is limited to one request per mailbox per minute.
+
+```powershell
+$qaCode = Read-Host 'Paste the six-digit code from this recipient in Mailpit'
+$qaVerifyUrl = "$qaBase/api/registration/email-verifications/$($qaChallenge.challenge_id)/verify"
+$qaWrongCode = if ($qaCode -eq '999999') { '999998' } else { '999999' }
+@{ code = $qaWrongCode } | ConvertTo-Json | curl.exe -sS -i -H 'Content-Type: application/json' --data-binary '@-' $qaVerifyUrl
+```
+
+**Expected:** `422` with a generic error under `code`; no user or registration token is created. Five wrong guesses disable this code. Continue using the correct code immediately, keeping any leading zero:
+
+```powershell
+$qaProofResponse = Invoke-WebRequest -UseBasicParsing -Method Post -Uri $qaVerifyUrl -ContentType 'application/json' -Body (@{ code = $qaCode } | ConvertTo-Json)
+$qaProof = $qaProofResponse.Content | ConvertFrom-Json
+$qaProofResponse.StatusCode
+$qaProof.expires_at
+$qaRegisterFields.registration_token = $qaProof.registration_token
+$qaRegisterBody = $qaRegisterFields | ConvertTo-Json
+```
+
+**Expected:** `200` and an expiry about ten minutes ahead. The proof is saved in memory; do not print or share it. It works only for this normalized mailbox and only once. Both responses have `Cache-Control: no-store`.
+
+Now create the account with that proof:
 
 ```powershell
 $qaRegisterResponse = Invoke-WebRequest -UseBasicParsing -Method Post -Uri "$qaBase/api/register" -ContentType 'application/json' -Body $qaRegisterBody
@@ -105,6 +151,8 @@ $qaAccount.expires_at
 - No password or password hash in the displayed user.
 
 Registration also issued a token. The token is saved in `$qaHeadersA`; subsequent requests use it to identify your account. You do not need to copy it manually.
+
+Refresh the Mailpit search. **Welcome to LeggTix** should arrive for the same recipient, containing the submitted name and no password, verification code, registration proof or access token. Login later in this plan must not send another welcome email.
 
 ## 7. Ask who is logged in
 
@@ -204,6 +252,7 @@ $qaAdminBody = @{
     email = "admin-$qaSuffix@example.test"
     password = $qaPassword
     password_confirmation = $qaPassword
+    registration_token = $qaProof.registration_token
     role = 'admin'
 } | ConvertTo-Json
 
@@ -258,7 +307,7 @@ $qaFinalLogout = Invoke-WebRequest -UseBasicParsing -Method Post -Uri "$qaBase/a
 $qaFinalLogout.StatusCode
 ```
 
-**Expected:** `204`. The demo account remains, with both tokens revoked. It is safe to repeat the walkthrough: step 5 chooses a new email.
+**Expected:** `204`. The demo account remains, with both tokens revoked. It is safe to repeat the walkthrough: step 5 chooses a new email. In Mailpit, keep the search for your exact `$qaEmail` and delete only the two matching messages if you do not need them. Do not use the global inbox deletion command. Temporary verification records are pruned by the documented scheduler; no database reset is needed.
 
 If you are done with Docker for now, you can stop it with:
 
@@ -270,9 +319,10 @@ This stops the services and keeps the database data. Leave the containers runnin
 
 ## What a complete pass means
 
-- Three running containers; app health `200`; Redis `PONG`; seven migrations `Ran`.
+- Five running containers; app health `200`; Redis `PONG`; eight migrations `Ran`.
 - Automated suite: all tests passed; use the latest verification report for the recorded test and assertion counts.
-- Register `201`; current user/login `200`; logout `204`.
+- Code request `202`; wrong code `422`; correct code `200`; proof-backed registration `201`; current user/login `200`; logout `204`.
+- Verification and welcome emails captured by Mailpit for the exact test recipient; no welcome on rejected signup or login.
 - Guest/old token `401`; invalid input/privilege attempt `422`; excessive attempts `429`.
 - Logging out one token leaves the other token usable.
 
@@ -288,6 +338,8 @@ That verifies the implemented authentication and database foundations. The [rese
 | Test image download/build fails | Check Docker Desktop and your network connection, then rerun step 3. |
 | `Cleanup failed` | Copy the exact retry command the script prints. It includes the temporary project's name. See the [testing guide](testing.md). |
 | Expected 201/200 but got 422 | Read the `errors` fields. If repeating manually with an old email, restart from step 5 for a fresh one. |
+| Verification code or registration proof expired | Request a new code after the mailbox cooldown, read the newest matching Mailpit message, then repeat verification and registration immediately. Each lifetime is ten minutes. |
+| Verification request returned 503 | The required email could not be queued. Inspect worker/app/Redis logs, then request again after the mailbox cooldown; an existing code request does not mean a user exists. |
 | 429 appeared before the throttle exercise | Wait 61 seconds and retry the failed request once. Repeated manual requests count toward the limits. |
 | `$qaHeadersA`/`$qaClientB` is missing | Keep one PowerShell terminal open and complete steps 5-8 in order. |
 | A test fails or an unexpected 500 appears | Save the failed test name/response, then inspect the logs below. |
@@ -296,6 +348,8 @@ That verifies the implemented authentication and database foundations. The [rese
 docker compose logs --tail 60 app
 docker compose logs --tail 60 mysql
 docker compose logs --tail 60 redis
+docker compose logs --tail 60 worker
+docker compose logs --tail 60 mailpit
 ```
 
 If you share output for help, omit passwords and access tokens. The useful information is the failing step, HTTP status, error message and failed test name.

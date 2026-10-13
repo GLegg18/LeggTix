@@ -4,6 +4,8 @@ Verified on 7 October 2026. Covers [registration and login #5](https://github.co
 
 This records the checks performed for this milestone. Use the [testing guide](testing.md) to run the current suite and the [manual test plan](manual-test-plan.md) for repeatable API checks.
 
+Issue #4 subsequently adds required email verification before new account creation and welcome email delivery. The [current authentication guide](authentication.md) and [email validation report](issue-4-email-validation.md) supersede this milestone's direct-registration contract; the historical checks below retain their original scope and date.
+
 ## Implemented scope
 
 The API provides registration, login, authenticated user lookup and current-token logout using Laravel Sanctum. Registration normalizes email, explicitly hashes every submitted password, creates only `regular_user` accounts, and creates the account and token in one transaction. Tokens expire after 24 hours. Validation, guest and throttle failures return JSON; user fields are explicitly selected and credential responses use `Cache-Control: no-store`.

@@ -111,7 +111,7 @@ class ApiDocumentationTest extends TestCase
                 }
             }
         }
-        $this->assertCount(6, $operations);
+        $this->assertCount(8, $operations);
         $this->assertEqualsCanonicalizing($routes, $operations);
         $bearerNames = [];
 
@@ -121,7 +121,7 @@ class ApiDocumentationTest extends TestCase
             }
         }
         $this->assertNotEmpty($bearerNames);
-        foreach ([['/health', 'get'], ['/register', 'post'], ['/login', 'post']] as [$path, $method]) {
+        foreach ([['/health', 'get'], ['/register', 'post'], ['/login', 'post'], ['/registration/email-verifications', 'post'], ['/registration/email-verifications/{challenge}/verify', 'post']] as [$path, $method]) {
             $this->assertSame([], $spec['paths'][$path][$method]['security'] ?? $spec['security'] ?? [], $path.' must be public.');
         }
         foreach ([['/user', 'get'], ['/logout', 'post'], ['/events/{event}/reservations', 'post']] as [$path, $method]) {
@@ -150,6 +150,8 @@ class ApiDocumentationTest extends TestCase
         }
         $registration = $this->resolve($spec['paths']['/register']['post']['requestBody']['content']['application/json']['schema'], $spec);
         $this->assertContains('password_confirmation', $registration['required']);
+        $this->assertContains('registration_token', $registration['required']);
+        $this->assertTrue($registration['properties']['registration_token']['writeOnly']);
         $this->assertTrue($registration['properties']['password']['writeOnly']);
         $this->assertTrue($registration['properties']['password_confirmation']['writeOnly']);
         $this->assertArrayNotHasKey('role', $registration['properties']);

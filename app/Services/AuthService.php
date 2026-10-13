@@ -9,19 +9,31 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\NewAccessToken;
+use RuntimeException;
 
 class AuthService
 {
+    public function __construct(
+        private readonly TransactionalEmailDispatcher $emails,
+        private readonly RegistrationEmailVerificationService $verifications,
+    ) {}
+
     public function register(array $attributes): NewAccessToken
     {
         try {
-            return DB::transaction(function () use ($attributes): NewAccessToken {
-                $user = User::create([
+            $token = DB::transaction(function () use ($attributes): NewAccessToken {
+                $verifiedAt = $this->verifications->consume($attributes['email'], $attributes['registration_token'] ?? '');
+                $user = new User([
                     'name' => $attributes['name'],
                     'email' => $attributes['email'],
                     // Public password input is always plaintext, even if it resembles a hash.
                     'password' => Hash::make($attributes['password']),
                 ]);
+                $user->email_verified_at = $verifiedAt;
+
+                if (! $user->save()) {
+                    throw new RuntimeException('The verified account could not be saved.');
+                }
 
                 return $this->issueToken($user);
             });
@@ -35,6 +47,10 @@ class AuthService
                 'email' => ['The email has already been taken.'],
             ]);
         }
+
+        $this->emails->welcome((int) $token->accessToken->tokenable_id);
+
+        return $token;
     }
 
     public function login(array $credentials): NewAccessToken

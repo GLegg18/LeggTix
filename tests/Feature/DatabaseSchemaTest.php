@@ -328,7 +328,7 @@ class DatabaseSchemaTest extends TestCase
             $this->assertSame($unique ? 0 : 1, (int) $actual[0]->NON_UNIQUE, $name);
         }
         $constraints = DB::select("SELECT CONSTRAINT_NAME, ENFORCED FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND CONSTRAINT_TYPE = 'CHECK'");
-        $this->assertCount(10, $constraints);
+        $this->assertCount(13, $constraints);
         foreach ($constraints as $constraint) {
             $this->assertSame('YES', $constraint->ENFORCED, $constraint->CONSTRAINT_NAME);
         }

@@ -2,7 +2,7 @@ FROM php:8.4-cli-bookworm AS runtime
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git unzip libzip-dev libonig-dev libxml2-dev \
-    && docker-php-ext-install pdo_mysql mbstring dom xml \
+    && docker-php-ext-install pdo_mysql mbstring dom xml pcntl \
     && pecl install redis-6.3.0 \
     && docker-php-ext-enable redis \
     && rm -rf /var/lib/apt/lists/*

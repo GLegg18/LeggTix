@@ -10,7 +10,9 @@ All paths below are relative to `http://localhost:8000`. Send JSON request bodie
 
 | Method and path | Input / authorization | Success |
 | --- | --- | --- |
-| `POST /api/register` | `name`, `email`, `password`, `password_confirmation` | `201`, user and new token |
+| `POST /api/registration/email-verifications` | JSON `email` | `202`, challenge ID and code expiry |
+| `POST /api/registration/email-verifications/{challenge}/verify` | JSON six-digit string `code` | `200`, one-use registration proof and expiry |
+| `POST /api/register` | `name`, `email`, `password`, `password_confirmation`, `registration_token` | `201`, user and new token |
 | `POST /api/login` | `email`, `password` | `200`, user and new token |
 | `GET /api/user` | `Authorization: Bearer <token>` | `200`, current user in `data` |
 | `POST /api/logout` | `Authorization: Bearer <token>` | `204`, empty body; current token revoked |
@@ -39,9 +41,12 @@ Validation errors and invalid login credentials return Laravel's `422` JSON shap
 
 - Names are required strings up to 255 characters; emails are required valid addresses up to 255 characters.
 - Registration and login both trim/lowercase email before validation and lookup. The model normalizes email on write too. A unique database index is the final duplicate-account guard.
+- New registration requires [email ownership verification](registration-email-verification.md) before collecting the final name/password request. Codes expire in 10 minutes with five failed guesses; one-use registration proofs expire in 10 minutes and bind to the exact normalized address. Account/token creation consumes the proof in the same transaction. Existing/demo account password login remains unchanged.
 - Registration requires matching password confirmation and at least eight characters. Passwords are at most 72 **bytes** and cannot contain null bytes, on registration and login. The byte limit prevents bcrypt from treating different long passwords as the same secret; multibyte characters can use several bytes each. Passwords are not trimmed.
 - Registration always creates `regular_user`. Supplying a nonempty `role` is rejected; other unexpected fields cannot assign IDs, hashes, timestamps or privileges. `role` is excluded from model mass assignment and cast to `UserRole`.
-- Trusted factories can create `organiser` and `admin` users for tests. The local/testing demo seeder creates three regular users, an organiser and an admin, as described in the [demo setup](../README.md#demo-data-and-login); these known credentials are local-only and no access tokens are seeded. Public role management, password reset and email verification remain separate work.
+- Trusted factories can create `organiser` and `admin` users for tests. The local/testing demo seeder creates three regular users, an organiser and an admin, as described in the [demo setup](../README.md#demo-data-and-login); these known credentials are local-only and no access tokens are seeded. Public role management, password reset and login MFA remain separate work.
+
+Successful proof-backed registration schedules a [welcome email](transactional-email.md) after the outermost database commit. The welcome does not affect the returned token or restrict login/booking. Login, rejected/duplicate registration and demo seeding remain silent. Welcome enqueue failure does not turn an already committed registration into a failed API response.
 
 ## Token lifecycle
 
@@ -59,18 +64,24 @@ docker compose exec app php artisan sanctum:prune-expired --hours=24
 
 ## Rate limits
 
-Registration allows 10 requests per minute per IP. Login allows 30 requests per minute per IP and five per minute for each account/IP combination. Limits count successful and unsuccessful requests. Known accounts are resolved through the same MySQL email lookup used for authentication, and the identity budget uses their account ID. This preserves the current accent-insensitive database matching: equivalent spellings cannot create separate budgets. Unknown email identities use a separate hashed, trimmed/lowercased key. The configured cache store supplies shared counters; Compose uses Redis. Test suites use the array store. Account-wide abuse controls across different IPs remain public-launch hardening work.
+Registration allows 10 requests per minute per IP, plus five per minute and 20 per hour per exact normalized email across IPs. Code request/resend and verification have their own IP/challenge/email budgets, documented in the [ownership verification guide](registration-email-verification.md). Login allows 30 requests per minute per IP and five per minute for each account/IP combination. Limits count successful and unsuccessful requests. Known accounts are resolved through the same MySQL email lookup used for authentication, and the identity budget uses their account ID. This preserves the current accent-insensitive database matching: equivalent spellings cannot create separate budgets. Unknown email identities use a separate hashed, trimmed/lowercased key. The configured cache store supplies shared counters; Compose uses Redis. Test suites use the array store. Account-wide login abuse controls across different IPs remain public-launch hardening work.
 
 ## PowerShell example
 
-Start the stack and migrate using the root README, then run:
+Start the stack/worker and migrate using the root README. Use a fresh address and read the ownership code in [Mailpit](http://localhost:8025), then run:
 
 ```powershell
+$registrationEmail = 'alex@example.test'
+$emailChallenge = Invoke-RestMethod -Method Post -Uri 'http://localhost:8000/api/registration/email-verifications' -ContentType 'application/json' -Body (@{ email = $registrationEmail } | ConvertTo-Json)
+$ownershipCode = Read-Host 'Enter the six-digit code from Mailpit'
+$registrationProof = Invoke-RestMethod -Method Post -Uri ('http://localhost:8000/api/registration/email-verifications/' + $emailChallenge.challenge_id + '/verify') -ContentType 'application/json' -Body (@{ code = $ownershipCode } | ConvertTo-Json)
+
 $registrationBody = @{
     name = 'Alex Example'
-    email = 'alex@example.com'
+    email = $registrationEmail
     password = 'example-password'
     password_confirmation = 'example-password'
+    registration_token = $registrationProof.registration_token
 } | ConvertTo-Json
 
 $registration = Invoke-RestMethod -Method Post -Uri 'http://localhost:8000/api/register' -ContentType 'application/json' -Body $registrationBody
@@ -78,7 +89,7 @@ $authHeaders = @{ Authorization = "Bearer $($registration.access_token)" }
 Invoke-RestMethod -Uri 'http://localhost:8000/api/user' -Headers $authHeaders
 Invoke-RestMethod -Method Post -Uri 'http://localhost:8000/api/logout' -Headers $authHeaders
 
-$loginBody = @{ email = 'alex@example.com'; password = 'example-password' } | ConvertTo-Json
+$loginBody = @{ email = $registrationEmail; password = 'example-password' } | ConvertTo-Json
 $login = Invoke-RestMethod -Method Post -Uri 'http://localhost:8000/api/login' -ContentType 'application/json' -Body $loginBody
 ```
 

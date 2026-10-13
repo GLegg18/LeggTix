@@ -16,19 +16,23 @@ use Laravel\Sanctum\PersonalAccessToken;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
+use Tests\Support\CreatesRegistrationProofs;
 
 class AuthenticationTest extends TestCase
 {
     use RefreshDatabase;
+    use CreatesRegistrationProofs;
 
     private function registration(array $changes = []): array
     {
-        return array_replace([
+        $attributes = array_replace([
             'name' => 'Test Customer',
             'email' => 'customer@example.test',
             'password' => 'correct-password',
             'password_confirmation' => 'correct-password',
         ], $changes);
+
+        return ['registration_token' => $this->registrationProof($attributes['email'])] + $attributes;
     }
 
     /** Use ordinary JSON clients without an Accept header or a fake auth guard. */
@@ -315,6 +319,9 @@ class AuthenticationTest extends TestCase
         $attributes = $this->registration();
         $this->app->make(AuthService::class)->register($attributes);
 
+        // Keep testing the database email uniqueness race with a fresh valid proof.
+        $attributes['registration_token'] = $this->registrationProof($attributes['email']);
+
         try {
             $this->app->make(AuthService::class)->register($attributes);
             $this->fail('A duplicate email must be rejected by the authoritative unique index.');
@@ -434,9 +441,10 @@ class AuthenticationTest extends TestCase
     public function test_registration_is_limited_by_ip(): void
     {
         for ($attempt = 0; $attempt < 10; $attempt++) {
-            $this->api('POST', '/api/register', [])->assertUnprocessable();
+            // Rotate identities so the new per-mailbox limit cannot mask the IP limit.
+            $this->api('POST', '/api/register', ['email' => 'ip-limit-'.$attempt.'@example.test'])->assertUnprocessable();
         }
-        $this->api('POST', '/api/register', [])->assertStatus(429)->assertHeader('Retry-After');
+        $this->api('POST', '/api/register', ['email' => 'ip-limit-next@example.test'])->assertStatus(429)->assertHeader('Retry-After');
         $this->assertDatabaseCount('users', 0);
     }
 }

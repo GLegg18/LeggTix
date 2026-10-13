@@ -17,7 +17,7 @@ class User extends Authenticatable
 
     protected $fillable = ['name', 'email', 'password'];
 
-    protected $hidden = ['password'];
+    protected $hidden = ['password', 'email_verified_at'];
 
     protected $attributes = ['role' => 'regular_user'];
 
@@ -28,6 +28,7 @@ class User extends Authenticatable
         return [
             'password' => 'hashed',
             'role' => UserRole::class,
+            'email_verified_at' => 'immutable_datetime',
         ];
     }
 

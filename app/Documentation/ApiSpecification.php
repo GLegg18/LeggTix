@@ -34,6 +34,67 @@ class ApiSpecification
             'description' => 'Must match password.',
         ];
         $schemas['LoginRequest']['properties']['password'] = $this->passwordSchema();
+        $schemas['RegisterRequest']['properties']['registration_token'] = [
+            'type' => 'string', 'pattern' => '^[a-f0-9]{64}$', 'minLength' => 64, 'maxLength' => 64,
+            'writeOnly' => true,
+            'description' => 'One-use registration proof returned after verifying the code sent to this exact normalized email. Expires after 10 minutes.',
+        ];
+        $schemas['StartRegistrationEmailVerificationRequest']['additionalProperties'] = false;
+        $schemas['VerifyRegistrationEmailRequest']['additionalProperties'] = false;
+        $schemas['VerifyRegistrationEmailRequest']['properties']['code'] = [
+            'type' => 'string', 'pattern' => '^[0-9]{6}$', 'minLength' => 6, 'maxLength' => 6,
+            'writeOnly' => true, 'description' => 'The emailed code as a string, including any leading zero.',
+        ];
+
+        $startVerification = &$specification['paths']['/registration/email-verifications']['post'];
+        $startVerification['summary'] = 'Request an email code before registration';
+        $startVerification['description'] = 'Send only email as a JSON object. Email is trimmed and lowercased. No account or access token is created. A six-digit code is queued to the address and expires in 10 minutes. Request again to resend: the new challenge replaces all previous codes and registration proofs for that exact email. Existing registered addresses return 422. Limits: 10/minute and 30/hour per IP, 1/minute and 5/hour per exact normalized email across all IPs. A 503 means the email could not be queued; request a new code after the applicable throttle delay.';
+        $startVerification['tags'] = ['Registration'];
+        $startVerification['requestBody']['content']['application/json']['example'] = ['email' => 'customer@example.test'];
+        $startVerification['responses']['202'] = $this->jsonResponse('A verification email was queued. Registration has not completed.', [
+            'type' => 'object', 'additionalProperties' => false,
+            'properties' => [
+                'challenge_id' => ['type' => 'string', 'pattern' => '^[a-f0-9]{64}$'],
+                'expires_at' => ['type' => 'string', 'format' => 'date-time'],
+            ],
+            'required' => ['challenge_id', 'expires_at'],
+        ]);
+        $startVerification['responses']['503'] = $this->messageResponse('Verification email could not be queued. Request a new code after the applicable throttle delay.');
+        $startVerification['responses']['503']['headers']['Retry-After'] = ['schema' => ['type' => 'integer', 'const' => 1]];
+
+        $verifyEmail = &$specification['paths']['/registration/email-verifications/{challenge}/verify']['post'];
+        $verifyEmail['summary'] = 'Verify the email code and obtain registration proof';
+        $verifyEmail['description'] = 'Send only the six-digit code as a JSON string field, preserving leading zeros. Up to five failed guesses are allowed for a challenge. An expired, superseded, exhausted, previously verified or unknown challenge returns the same 422 code error. Successful verification returns a high-entropy registration_token once, valid for 10 minutes. Complete /register with the same exact normalized email and this token. If the response is lost, request a new code. Limits: 20/minute and 100/hour per IP, 5/minute per challenge, and 20/hour per target email across all IPs.';
+        $verifyEmail['tags'] = ['Registration'];
+        $verifyEmail['parameters'] = [[
+            'name' => 'challenge', 'in' => 'path', 'required' => true,
+            'schema' => ['type' => 'string', 'pattern' => '^[a-f0-9]{64}$'],
+            'description' => 'challenge_id returned by the request-code operation.',
+        ]];
+        $verifyEmail['requestBody']['content']['application/json']['example'] = ['code' => '123456'];
+        $verifyEmail['responses']['200'] = $this->jsonResponse('Email verified. The returned proof can complete registration once.', [
+            'type' => 'object', 'additionalProperties' => false,
+            'properties' => [
+                'registration_token' => ['type' => 'string', 'pattern' => '^[a-f0-9]{64}$'],
+                'expires_at' => ['type' => 'string', 'format' => 'date-time'],
+            ],
+            'required' => ['registration_token', 'expires_at'],
+        ]);
+
+        foreach ([&$startVerification, &$verifyEmail] as &$verificationOperation) {
+            $verificationOperation['responses']['400'] = $this->messageResponse('The body contains malformed JSON.');
+            $verificationOperation['responses']['415'] = $this->messageResponse('A JSON content type is required.');
+            $verificationOperation['responses']['422'] = ['$ref' => '#/components/responses/ValidationException'];
+            $verificationOperation['responses']['429'] = $this->rateLimitResponse();
+
+            foreach ($verificationOperation['responses'] as &$verificationResponse) {
+                if (! isset($verificationResponse['$ref'])) {
+                    $verificationResponse['headers']['Cache-Control'] = $this->noStoreHeader();
+                }
+            }
+            unset($verificationResponse);
+        }
+        unset($verificationOperation);
 
         $health = &$specification['paths']['/health']['get'];
         $health['summary'] = 'Check API health';
@@ -42,11 +103,12 @@ class ApiSpecification
         $health['responses']['200']['description'] = 'The API is running.';
 
         $register = &$specification['paths']['/register']['post'];
-        $register['summary'] = 'Register a customer';
-        $register['description'] = 'Creates a regular_user account and returns a bearer token. Email is trimmed and lowercased. A nonempty role override is rejected. Other unrecognized fields are ignored. Limit: 10 requests per minute per IP.';
+        $register['summary'] = 'Complete registration with verified email proof';
+        $register['description'] = 'First request and verify an email code using the registration operations. Submit that one-use registration_token with this exact normalized email, name and password to create a regular_user account and obtain a bearer token. The proof expires after 10 minutes and is consumed atomically with account/token creation; a failed write preserves it. Email is trimmed and lowercased. A nonempty role override is rejected. Other unrecognized fields are ignored. Limits: 10/minute per IP, 5/minute and 20/hour per target email across all IPs. Existing/demo account login is unchanged.';
         $register['requestBody']['content']['application/json']['example'] = [
             'name' => 'API Customer', 'email' => 'customer@example.test',
             'password' => 'example-password', 'password_confirmation' => 'example-password',
+            'registration_token' => str_repeat('0', 64),
         ];
         $this->completeTokenResponse($register, '201', 'Account created and authenticated.');
         $register['responses']['429'] = $this->rateLimitResponse();

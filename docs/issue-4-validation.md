@@ -4,6 +4,8 @@ Verification date: 12 October 2026. Scope: [Add Mailpit for local email preview]
 
 The ticket requires the inbox at `http://localhost:8025`, Laravel and its queue worker reaching SMTP by Compose service name, capture without real delivery, and README configuration. Confirmation/promotion notification workflows remain separate tickets; this change supplies their local mail infrastructure.
 
+This records the original infrastructure milestone. The owner subsequently expanded the same ticket with required signup email verification, welcome messages and booking confirmations. See the [expanded email validation report](issue-4-email-validation.md) for that work; promotion notifications remain in issue #15.
+
 ## Acceptance automation
 
 `scripts/mailpit-smoke.ps1` checks the host-facing inbox and invokes `scripts/support/mailpit-smoke.php` in the normal app container. The PHP probe checks the effective local mail/queue configuration before creating anything, sends one direct SMTP message, and enqueues one Laravel `SendQueuedMailable` in Redis. It verifies that the queued message is absent until a separate `php artisan queue:work` process runs, checks exact subjects, `.test` recipients and body markers through [Mailpit's API](https://mailpit.axllent.org/docs/api-v1/), and restarts an empty worker to check that the completed job is not processed again.

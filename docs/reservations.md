@@ -32,6 +32,8 @@ Business conflicts contain `message` and `code`. A client receiving `503` can re
 
 Repeated booking has a conflict outcome and never allocates another place. A lost successful response can therefore be retried safely without increasing occupancy, although this is business duplicate protection rather than a general request-idempotency API.
 
+Successful API booking now schedules a [confirmation email](transactional-email.md) after the outermost database commit, addressed to the reservation's holder. Rejected and duplicate requests schedule nothing. The message includes reference `LT-<reservation ID>` and event details in the event's display timezone. Enqueue failure does not change the successful response or allocation. Seeders, factories and direct `ReserveEventAction` calls remain silent; cancellation/past-event checks in the job suppress stale confirmations.
+
 ## Inventory transaction
 
 1. Begin a MySQL transaction and lock the event primary key using `FOR UPDATE`. Fetch current state inside this transaction; a controller-loaded event or earlier availability response cannot allocate capacity.

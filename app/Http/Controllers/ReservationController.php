@@ -7,6 +7,7 @@ use App\Exceptions\ReservationRejectedException;
 use App\Http\Requests\ReserveEventRequest;
 use App\Http\Resources\ReservationResource;
 use App\Models\Event;
+use App\Services\TransactionalEmailDispatcher;
 use Illuminate\Contracts\Database\ConcurrencyErrorDetector;
 use Illuminate\Database\DeadlockException;
 use Illuminate\Database\QueryException;
@@ -17,6 +18,7 @@ class ReservationController
     public function __construct(
         private readonly ReserveEventAction $reserve,
         private readonly ConcurrencyErrorDetector $concurrencyErrors,
+        private readonly TransactionalEmailDispatcher $emails,
     ) {}
 
     public function store(ReserveEventRequest $request, Event $event): JsonResponse
@@ -38,6 +40,8 @@ class ReservationController
                 'code' => 'reservation_busy',
             ], 503)->header('Retry-After', '1')->header('Cache-Control', 'no-store');
         }
+
+        $this->emails->reservationConfirmed($reservation->id);
 
         return response()->json([
             'data' => new ReservationResource($reservation),
