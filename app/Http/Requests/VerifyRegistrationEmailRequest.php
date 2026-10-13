@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-class VerifyRegistrationEmailRequest extends RegistrationVerificationRequest
+class VerifyRegistrationEmailRequest extends JsonAuthenticationRequest
 {
     public function rules(): array
     {

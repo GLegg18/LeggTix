@@ -46,7 +46,7 @@ try {
     $input = json_decode(file_get_contents($barrier.'/input.json'), true, flags: JSON_THROW_ON_ERROR);
     $request = Request::create($input['uri'], 'POST', server: [
         'CONTENT_TYPE' => 'application/json', 'REMOTE_ADDR' => $input['ip'],
-    ], content: json_encode($input['body'], JSON_THROW_ON_ERROR));
+    ], cookies: $input['cookies'] ?? [], content: json_encode($input['body'], JSON_THROW_ON_ERROR));
     $kernel = app(HttpKernel::class);
     $response = $kernel->handle($request);
     $kernel->terminate($request, $response);

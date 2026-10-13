@@ -20,8 +20,9 @@
     </header>
     <aside class="documentation-note">
         <strong>Try it out sends real requests.</strong>
-        Login, copy your access token, then use Authorize to try protected endpoints.
+        Login with your password, verify the emailed code, then copy your access token into Authorize.
         Tokens stay in this page's memory. Registration creates an account and booking reserves a place.
+        Choosing remember_device stores a secure browser cookie for seven days; it never authorizes API requests by itself.
     </aside>
     <div id="swagger-ui"></div>
     <noscript>Enable JavaScript to use the interactive API reference. The OpenAPI JSON remains available.</noscript>

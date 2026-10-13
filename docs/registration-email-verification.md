@@ -1,6 +1,6 @@
 # Required email ownership before registration
 
-New customers must prove access to their email address before creating an account. This is the user's requested registration-only email check. Password login for existing/demo accounts is unchanged; no authenticator, second login challenge or booking gate is added. The [MFA assessment](mfa-assessment.md) records that scope decision.
+New customers must prove access to their email address before creating an account. After signup, all accounts including legacy/demo users also use the separate [email login factor](login-email-verification.md), with optional seven-day trusted-browser cookies. No authenticator-app flow or booking-specific gate is added. The [MFA assessment](mfa-assessment.md) records that scope decision.
 
 ## API flow
 
@@ -49,7 +49,7 @@ Code verification uses an HMAC bound to the challenge ID and email with the appl
 
 Issuance/resend, code attempts and proof consumption lock the verification row. Database UTC time is sampled after acquiring the lock, so waiting cannot extend validity. Registration consumes the proof in the same MySQL transaction that creates the user and Sanctum token. A write failure rolls everything back, leaving the proof reusable until expiry. Concurrent consumption creates at most one account; a concurrent resend and registration follow the row-lock winner. Consuming the proof clears it and the code fields. Successful code verification, expiry checks and five failed guesses clear the delivery code as appropriate.
 
-New accounts receive a server-assigned `users.email_verified_at` audit timestamp. It is hidden, excluded from mass assignment and absent from the public user resource. Existing/demo accounts keep `null` and remain usable. Factories and demo seeders do not send verification messages.
+New accounts receive a server-assigned `users.email_verified_at` audit timestamp. It is hidden, excluded from mass assignment and absent from the public user resource. Existing/demo accounts remain usable and fill a null marker after their first successful login code; an existing verification timestamp is preserved. Factories and demo seeders do not send verification messages.
 
 ## Worker, cleanup and delivery limits
 

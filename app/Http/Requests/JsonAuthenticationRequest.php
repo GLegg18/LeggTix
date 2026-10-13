@@ -10,7 +10,7 @@ use JsonException;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\UnsupportedMediaTypeHttpException;
 
-abstract class RegistrationVerificationRequest extends FormRequest
+abstract class JsonAuthenticationRequest extends FormRequest
 {
     public function authorize(): bool
     {

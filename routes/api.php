@@ -14,10 +14,13 @@ Route::post('/registration/email-verifications/{challenge}/verify', [Registratio
 
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:registration');
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
+Route::post('/login/email-verifications/{challenge}/verify', [AuthController::class, 'verifyLogin'])
+    ->middleware('throttle:login-email-verify')->where('challenge', '[a-f0-9]{64}');
 
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/user', [AuthController::class, 'user']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::delete('/trusted-devices', [AuthController::class, 'revokeTrustedDevices']);
     Route::post('/events/{event}/reservations', [ReservationController::class, 'store'])
         ->middleware('throttle:reservations')->whereNumber('event');
 });

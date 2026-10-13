@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Jobs\SendReservationConfirmationEmail;
 use App\Jobs\SendRegistrationVerificationEmail;
+use App\Jobs\SendLoginVerificationEmail;
 use App\Jobs\SendWelcomeEmail;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +15,19 @@ use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 
 class TransactionalEmailDispatcher
 {
+    public function loginVerification(int $verificationId, string $challengeId): void
+    {
+        DB::afterCommit(function () use ($verificationId, $challengeId): void {
+            try {
+                Queue::connection()->push(new SendLoginVerificationEmail($verificationId, $challengeId), '', 'emails');
+            } catch (Throwable $exception) {
+                $this->logFailure('login_verification', $verificationId, $exception);
+
+                throw new ServiceUnavailableHttpException(1, 'Login email could not be queued. Please request a new login code.');
+            }
+        });
+    }
+
     public function registrationVerification(int $verificationId, string $challengeId): void
     {
         DB::afterCommit(function () use ($verificationId, $challengeId): void {

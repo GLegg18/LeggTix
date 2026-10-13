@@ -22,7 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
         $exceptions->respond(function (Response $response): Response {
-            if (request()->is('api/registration/email-verifications*')) {
+            if (request()->is('api/registration/email-verifications*', 'api/login*', 'api/trusted-devices', 'api/logout')) {
                 $response->headers->set('Cache-Control', 'no-store, private');
             }
 

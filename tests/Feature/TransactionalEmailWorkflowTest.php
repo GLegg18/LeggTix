@@ -21,6 +21,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
 use Tests\Support\CreatesRegistrationProofs;
+use Tests\Support\CompletesLoginChallenges;
 
 class TransactionalEmailWorkflowTest extends TestCase
 {
@@ -28,6 +29,7 @@ class TransactionalEmailWorkflowTest extends TestCase
     // RefreshDatabase treats its wrapping transaction as already committed.
     use DatabaseMigrations;
     use CreatesRegistrationProofs;
+    use CompletesLoginChallenges;
 
     protected function setUp(): void
     {
@@ -239,9 +241,12 @@ class TransactionalEmailWorkflowTest extends TestCase
         Queue::fake();
 
         $this->api('/api/register', $this->registration())->assertUnprocessable();
-        $this->api('/api/login', ['email' => 'customer@example.test', 'password' => 'mail-test-password'])->assertOk();
+        $this->completeLogin(['email' => 'customer@example.test', 'password' => 'mail-test-password']);
         $this->api('/api/login', ['email' => 'customer@example.test', 'password' => 'wrong-password'])->assertUnprocessable();
-        Queue::assertNothingPushed();
+        Queue::assertNotPushed(SendWelcomeEmail::class);
+        Queue::assertNotPushed(SendReservationConfirmationEmail::class);
+        Queue::assertPushed(\App\Jobs\SendLoginVerificationEmail::class, 1);
+        Queue::assertCount(1);
         $this->assertDatabaseCount('users', 1);
     }
 

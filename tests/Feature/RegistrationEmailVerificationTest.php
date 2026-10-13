@@ -20,6 +20,7 @@ use Laravel\Sanctum\PersonalAccessToken;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\Support\CreatesRegistrationProofs;
+use Tests\Support\CompletesLoginChallenges;
 use Tests\TestCase;
 
 class RegistrationEmailVerificationTest extends TestCase
@@ -27,6 +28,7 @@ class RegistrationEmailVerificationTest extends TestCase
     // Real commits prove failed attempts survive 422 and callbacks wait for the outer transaction.
     use DatabaseMigrations;
     use CreatesRegistrationProofs;
+    use CompletesLoginChallenges;
 
     protected function setUp(): void
     {
@@ -123,11 +125,12 @@ class RegistrationEmailVerificationTest extends TestCase
     {
         $legacy = User::factory()->create(['email' => 'legacy@example.test']);
         $this->assertNull($legacy->email_verified_at);
-        $this->api('/api/login', ['email' => 'legacy@example.test', 'password' => 'password'])->assertOk();
+        $this->completeLogin(['email' => 'legacy@example.test', 'password' => 'password']);
         $this->api('/api/registration/email-verifications', ['email' => ' LEGACY@EXAMPLE.TEST '])
             ->assertUnprocessable()->assertJsonValidationErrors('email');
         $this->assertDatabaseCount('registration_email_verifications', 0);
-        Queue::assertNothingPushed();
+        Queue::assertPushed(\App\Jobs\SendLoginVerificationEmail::class, 1);
+        Queue::assertCount(1);
     }
 
     #[DataProvider('badCodes')]
@@ -246,11 +249,15 @@ class RegistrationEmailVerificationTest extends TestCase
         Queue::assertPushed(SendWelcomeEmail::class, 1);
     }
 
-    public function test_token_write_failure_rolls_back_user_and_proof_then_same_proof_can_succeed(): void
+    #[DataProvider('tokenWriteFailures')]
+    public function test_token_write_failure_rolls_back_user_and_proof_then_same_proof_can_succeed(bool $veto): void
     {
         $proof = $this->registrationProof();
         $before = DB::table('registration_email_verifications')->first();
-        Event::listen('eloquent.creating: '.PersonalAccessToken::class, static function (): never {
+        Event::listen('eloquent.creating: '.PersonalAccessToken::class, static function () use ($veto): bool {
+            if ($veto) {
+                return false;
+            }
             throw new RuntimeException('Injected token write failure');
         });
         $this->api('/api/register', $this->registration($proof))->assertStatus(500);
@@ -261,6 +268,11 @@ class RegistrationEmailVerificationTest extends TestCase
         Event::forget('eloquent.creating: '.PersonalAccessToken::class);
         $this->api('/api/register', $this->registration($proof))->assertCreated();
         $this->assertNotNull(RegistrationEmailVerification::sole()->consumed_at);
+    }
+
+    public static function tokenWriteFailures(): array
+    {
+        return [['veto' => false], ['veto' => true]];
     }
 
     public function test_proof_consumption_outside_registration_transaction_is_refused(): void

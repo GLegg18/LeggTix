@@ -104,7 +104,7 @@ try {
     Invoke-Issue9Login -Email $taskActorEmail -Expected 429
     Invoke-Issue9Login -Email $taskActorAlias -Expected 429
     Invoke-Issue9Login -Email "issue9.other.$($taskFixture.tag)@example.test" -Expected 422
-    Write-Host 'PASS Redis-login-throttle: equivalent MySQL spellings share five attempts; another account remains independent.'
+    Write-Host 'PASS Redis-login-throttle: equivalent MySQL spellings share five attempts; another account remains independent. This check submits only wrong passwords; login OTP is exercised by the dedicated login acceptance.'
 
     $null = Invoke-Issue9Http -Label guest -EventId $taskAvailable -Expected 401
     $null = Invoke-Issue9Http -Label invalid-token -EventId $taskAvailable -Expected 401 -Token 'invalid-token'
@@ -167,7 +167,7 @@ try {
             $taskCleanup = $taskCleanupJson | ConvertFrom-Json
             foreach ($taskCount in $taskCleanup.PSObject.Properties) { Assert-Issue9 ($taskCount.Value -eq 0) 'Fixture cleanup left records behind.' }
             if ($null -ne $taskRecoveryFile) { Remove-Item -LiteralPath $taskRecoveryFile -ErrorAction Stop }
-            Write-Host 'PASS cleanup: fixture events/users/type/reservations/waitlist entries/tokens all zero.'
+            Write-Host 'PASS cleanup: fixture events/users/type/reservations/waitlist entries/tokens/login verifications/trusted devices all zero.'
         } catch {
             $taskCleanupFailed = $true
             Write-Host "Fixture cleanup failed: $($_.Exception.Message)" -ForegroundColor Red

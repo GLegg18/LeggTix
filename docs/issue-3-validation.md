@@ -2,6 +2,8 @@
 
 Implementation and verification record for [issue #3](https://github.com/GLegg18/LeggTix/issues/3). Implementation checks ran on 9 October 2026; live manual checks and a focused regression rerun ran on 12 October 2026. The [README demo setup](../README.md#demo-data-and-login) is the guide for local commands, credentials and the event matrix. The [earlier report](demo-data-validation.md) records the initial seeders before reservations were included.
 
+The checks below predate required emailed login challenges. Demo accounts now follow the same code/trusted-device policy as other accounts; use the [current authentication guide](authentication.md) and [login validation report](issue-4-login-validation.md) for that contract.
+
 ## Changes and scope
 
 `DatabaseSeeder` delegates to `DemoSeeder`, which rejects every environment except `local` and `testing` before database access. A fresh seed creates five users (three regular users, one organiser, one admin), five active event types, eight organiser-owned events and three confirmed reservations. All credentials are known local-only examples; password hashes are created normally and no access token is seeded.

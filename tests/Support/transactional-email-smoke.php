@@ -66,6 +66,7 @@ $waitForMail = static function (string $subject) use ($ownMessages, $mailpit): a
 };
 $passed = false;
 $keepMessages = in_array('--keep-messages', $argv, true);
+$keepFixtures = ! $cleanupOnly && in_array('--keep-fixtures', $argv, true);
 $exitCode = 0;
 echo 'Acceptance tag: '.$tag.PHP_EOL;
 echo 'Owned inbox recipient: '.$customerEmail.PHP_EOL;
@@ -100,7 +101,19 @@ try {
         $request('/api/register', [...$registration, 'email' => 'other.'.$tag.'@example.test', 'registration_token' => $proof], 422);
         $signup = $request('/api/register', [...$registration, 'registration_token' => $proof], 201);
         $request('/api/register', [...$registration, 'registration_token' => $proof], 422);
-        $login = $request('/api/login', ['email' => $customerEmail, 'password' => $registration['password']], 200);
+        $customer = User::where('email', $customerEmail)->sole();
+        $beforeLoginTokens = $customer->tokens()->count();
+        $loginChallenge = $request('/api/login', ['email' => $customerEmail, 'password' => $registration['password']], 202);
+        $assert(! isset($loginChallenge['access_token']) && $customer->tokens()->count() === $beforeLoginTokens, 'Password step issued a token before the factor.');
+        $loginMail = $waitForMail('Your LeggTix login code');
+        $assert(str_contains($loginMail['Text'], $loginChallenge['challenge_id']), 'Login mail challenge reference mismatch.');
+        $assert(preg_match('/\b[0-9]{6}\b/', $loginMail['Text'], $loginMatched) === 1, 'Login mail has no six-digit code.');
+        $loginCode = $loginMatched[0];
+        $loginPath = '/api/login/email-verifications/'.$loginChallenge['challenge_id'].'/verify';
+        $request($loginPath, ['code' => $loginCode === '999999' ? '999998' : '999999'], 422);
+        $login = $request($loginPath, ['code' => $loginCode], 200);
+        $request($loginPath, ['code' => $loginCode], 422);
+        $assert($customer->tokens()->count() === $beforeLoginTokens + 1 && ! DB::table('trusted_devices')->where('user_id', $customer->id)->exists(), 'Factor opt-out token/trust boundary failed.');
         $welcome = $waitForMail('Welcome to LeggTix');
         $request('/api/events/'.$event->id.'/reservations', [], 401);
         $request('/api/events/'.$event->id.'/reservations', ['user_id' => $owner->id], 422, $signup['access_token']);
@@ -109,13 +122,13 @@ try {
         $ownerToken = $owner->createToken('owned-smoke-full-check')->plainTextToken;
         $request('/api/events/'.$event->id.'/reservations', [], 409, $ownerToken);
         $confirmation = $waitForMail('Your LeggTix reservation is confirmed');
-        foreach ([$verifyMail, $welcome, $confirmation] as $mail) {
+        foreach ([$verifyMail, $welcome, $loginMail, $confirmation] as $mail) {
             $assert(count($mail['To']) === 1 && $mail['To'][0]['Address'] === $customerEmail, 'Captured mail recipient mismatch.');
         }
         foreach ([$welcome, $confirmation] as $mail) {
             $assert(str_contains($mail['HTML'], e($registration['name'])) && str_contains($mail['Text'], $registration['name']), 'HTML/text customer rendering mismatch.');
             $assert(! str_contains($mail['HTML'], '<b>Customer'), 'Customer HTML was not escaped.');
-            foreach ([$registration['password'], $signup['access_token'], $login['access_token'], $ownerToken, $code, $proof] as $secret) {
+            foreach ([$registration['password'], $signup['access_token'], $login['access_token'], $ownerToken, $code, $proof, $loginCode] as $secret) {
                 $assert(! str_contains($mail['HTML'].$mail['Text'], $secret), 'Workflow email exposed a credential, code or token.');
             }
         }
@@ -126,9 +139,9 @@ try {
         $assert($event->fresh()->confirmed_count === 1 && $event->reservations()->where('status', 'confirmed')->count() === 1, 'Worker changed ticket inventory.');
         $assert(DB::table('registration_email_verifications')->where('email', $customerEmail)->whereNotNull('consumed_at')->exists(), 'Proof was not consumed.');
         usleep(1500000);
-        $assert(count($ownMessages()) === 3, 'Unexpected extra owned workflow message.');
-        echo "PASS real HTTP verification, signup, login and booking; wrong code/proof, missing proof, replays, guest, ownership override and full capacity rejected.\n";
-        echo "PASS existing Compose Redis worker delivered all three generated multipart messages to Mailpit; exact holder/reference/local time, escaped HTML, literal text, no workflow secrets; inventory unchanged.\n";
+        $assert(count($ownMessages()) === 4, 'Unexpected extra owned workflow message.');
+        echo "PASS real HTTP verification/signup, two-step login and booking; no early login token or implicit trust; wrong/replayed codes, wrong/missing proof, guest, holder override and full capacity rejected.\n";
+        echo "PASS existing Compose Redis worker delivered all four generated multipart messages to Mailpit; exact holder/reference/local time, escaped HTML, literal text, no workflow secrets; inventory unchanged.\n";
         $passed = true;
     }
 } catch (Throwable $exception) {
@@ -136,7 +149,8 @@ try {
     $exitCode = 1;
 } finally {
     try {
-        DB::transaction(function () use ($tag, $ownerEmail, $customerEmail, $eventName): void {
+        if (! ($passed && $keepFixtures)) {
+            DB::transaction(function () use ($tag, $ownerEmail, $customerEmail, $eventName): void {
             $owner = User::where('email', $ownerEmail)->first();
             if ($owner !== null) {
                 foreach (Event::where('owner_id', $owner->id)->where('name', $eventName)->lockForUpdate()->get() as $event) {
@@ -146,14 +160,17 @@ try {
                 }
             }
             foreach (User::whereIn('email', [$ownerEmail, $customerEmail])->get() as $user) {
+                DB::table('login_email_verifications')->where('user_id', $user->id)->delete();
+                DB::table('trusted_devices')->where('user_id', $user->id)->delete();
                 $user->tokens()->delete();
                 $user->delete();
             }
             DB::table('registration_email_verifications')->where('email', $customerEmail)->delete();
             EventType::where('slug', 'issue4-email-'.$tag)->delete();
-        });
-        if ($passed && $keepMessages) {
-            echo 'Kept three owned messages for browser review. Cleanup: docker compose exec -T app php tests/Support/transactional-email-smoke.php cleanup '.$tag.PHP_EOL;
+            });
+        }
+        if ($passed && ($keepMessages || $keepFixtures)) {
+            echo 'Kept four owned messages'.($keepFixtures ? ' and tagged fixtures for browser login checks' : ' for browser review').'. Cleanup: docker compose exec -T app php tests/Support/transactional-email-smoke.php cleanup '.$tag.PHP_EOL;
         } else {
             // Missing rows suppress jobs that have not started. Allow an in-flight SMTP send to settle.
             usleep(1500000);
@@ -163,9 +180,11 @@ try {
             }
             $assert($ownMessages() === [], 'Owned captured messages remain after cleanup.');
         }
-        $assert(User::whereIn('email', [$ownerEmail, $customerEmail])->count() === 0
-            && ! DB::table('registration_email_verifications')->where('email', $customerEmail)->exists(), 'Owned fixture cleanup incomplete.');
-        echo "PASS cleanup removed only tagged fixture rows/tokens; shared queues and unrelated inbox messages were untouched.\n";
+        if (! ($passed && $keepFixtures)) {
+            $assert(User::whereIn('email', [$ownerEmail, $customerEmail])->count() === 0
+                && ! DB::table('registration_email_verifications')->where('email', $customerEmail)->exists(), 'Owned fixture cleanup incomplete.');
+            echo "PASS cleanup removed only tagged fixture rows/tokens/auth state; shared queues and unrelated inbox messages were untouched.\n";
+        }
     } catch (Throwable $exception) {
         fwrite(STDERR, 'CLEANUP FAILED: '.$exception->getMessage().PHP_EOL);
         fwrite(STDERR, 'Recovery: docker compose exec -T app php tests/Support/transactional-email-smoke.php cleanup '.$tag.PHP_EOL);

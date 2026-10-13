@@ -3,23 +3,9 @@
 namespace App\Http\Requests;
 
 use App\Rules\BcryptPassword;
-use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Str;
 
-class LoginRequest extends FormRequest
+class LoginRequest extends JsonAuthenticationRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
-
-    protected function prepareForValidation(): void
-    {
-        if (is_string($this->input('email'))) {
-            $this->merge(['email' => Str::lower(trim($this->input('email')))]);
-        }
-    }
-
     public function rules(): array
     {
         return [

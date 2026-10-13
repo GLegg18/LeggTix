@@ -34,6 +34,16 @@ class ApiSpecification
             'description' => 'Must match password.',
         ];
         $schemas['LoginRequest']['properties']['password'] = $this->passwordSchema();
+        $schemas['LoginRequest']['additionalProperties'] = false;
+        $schemas['VerifyLoginEmailRequest']['additionalProperties'] = false;
+        $schemas['VerifyLoginEmailRequest']['properties']['code'] = [
+            'type' => 'string', 'pattern' => '^[0-9]{6}$', 'minLength' => 6, 'maxLength' => 6,
+            'writeOnly' => true, 'description' => 'The emailed login code as a string, including any leading zero.',
+        ];
+        $schemas['VerifyLoginEmailRequest']['properties']['remember_device'] = [
+            'type' => 'boolean', 'default' => false,
+            'description' => 'After successful code verification, remember this browser for seven days using a Secure HttpOnly cookie. Password remains required.',
+        ];
         $schemas['RegisterRequest']['properties']['registration_token'] = [
             'type' => 'string', 'pattern' => '^[a-f0-9]{64}$', 'minLength' => 64, 'maxLength' => 64,
             'writeOnly' => true,
@@ -104,7 +114,7 @@ class ApiSpecification
 
         $register = &$specification['paths']['/register']['post'];
         $register['summary'] = 'Complete registration with verified email proof';
-        $register['description'] = 'First request and verify an email code using the registration operations. Submit that one-use registration_token with this exact normalized email, name and password to create a regular_user account and obtain a bearer token. The proof expires after 10 minutes and is consumed atomically with account/token creation; a failed write preserves it. Email is trimmed and lowercased. A nonempty role override is rejected. Other unrecognized fields are ignored. Limits: 10/minute per IP, 5/minute and 20/hour per target email across all IPs. Existing/demo account login is unchanged.';
+        $register['description'] = 'First request and verify an email code using the registration operations. Submit that one-use registration_token with this exact normalized email, name and password to create a regular_user account and obtain a bearer token. The proof expires after 10 minutes and is consumed atomically with account/token creation; a failed write preserves it. Email is trimmed and lowercased. A nonempty role override is rejected. Other unrecognized fields are ignored. Limits: 10/minute per IP, 5/minute and 20/hour per target email across all IPs. Later logins require the password plus email code or an unexpired trusted-browser cookie.';
         $register['requestBody']['content']['application/json']['example'] = [
             'name' => 'API Customer', 'email' => 'customer@example.test',
             'password' => 'example-password', 'password_confirmation' => 'example-password',
@@ -114,13 +124,38 @@ class ApiSpecification
         $register['responses']['429'] = $this->rateLimitResponse();
 
         $login = &$specification['paths']['/login']['post'];
-        $login['summary'] = 'Login and obtain a bearer token';
-        $login['description'] = 'Copy access_token from the response into Authorize. Email is trimmed and lowercased. Invalid credentials return 422. Limits: 30 requests per minute per IP and 5 per account/IP pair. Equivalent email spellings resolving to the same account share that budget; unknown addresses use a normalized email/IP budget.';
+        $login['summary'] = 'Start a password and email-code login';
+        $login['description'] = 'All accounts, including demo and legacy accounts, require the correct password plus an emailed code. Normally returns 202 with a challenge and no access token; complete the login-code operation next. A valid trusted-browser cookie permits 200 after checking the password, rotates its validator, and retains the original seven-day expiry. Invalid credentials return the existing generic 422. To resend, repeat this password request after the one-minute per-account issuance cooldown; the latest challenge replaces the old code. Limits: 30/minute per IP, 5/minute per account/IP and account across all IPs, and 20/hour per account. Use a JSON object with only email/password.';
         $login['requestBody']['content']['application/json']['example'] = [
             'email' => 'demo.user@example.test', 'password' => 'demo-password',
         ];
-        $this->completeTokenResponse($login, '200', 'Authenticated.');
+        $login['responses']['200'] = $register['responses']['201'];
+        $login['responses']['200']['description'] = 'Password and a valid trusted browser authenticated the user. The cookie validator is rotated without extending its absolute expiry.';
+        $login['responses']['202'] = $startVerification['responses']['202'];
+        $login['responses']['202']['description'] = 'Password accepted and login code queued. No account authentication token has been issued.';
+        $login['responses']['400'] = $this->messageResponse('The body contains malformed JSON.');
+        $login['responses']['415'] = $this->messageResponse('A JSON content type is required.');
+        $login['responses']['422'] = ['$ref' => '#/components/responses/ValidationException'];
+        $login['responses']['503'] = $this->messageResponse('The login code could not be queued. Retry the password request after the applicable cooldown/throttle delay.');
+        $login['responses']['503']['headers']['Retry-After'] = ['schema' => ['type' => 'integer', 'const' => 1]];
         $login['responses']['429'] = $this->rateLimitResponse();
+
+        $verifyLogin = &$specification['paths']['/login/email-verifications/{challenge}/verify']['post'];
+        $verifyLogin['summary'] = 'Verify the login code and obtain a bearer token';
+        $verifyLogin['description'] = 'Send the six-digit code as a string and optional remember_device boolean, default false. Codes expire in ten minutes, allow five failed guesses and are consumed once atomically with the Sanctum token and optional trusted-browser credential. Wrong, expired, superseded, exhausted, consumed or credential-changed challenges return generic 422 errors.code. remember_device=true sets a host-only Secure HttpOnly SameSite=Strict __Host-leggtix_trusted_device cookie with Path=/ and a seven-day absolute expiry. Its credential is never returned in JSON; HTTPS or a browser supporting Secure cookies on localhost is required. Limits: 20/minute and 100/hour per IP, 5/minute per challenge, and 20/hour per account across all challenges/IPs.';
+        $verifyLogin['tags'] = ['Authentication'];
+        $verifyLogin['parameters'] = [[
+            'name' => 'challenge', 'in' => 'path', 'required' => true,
+            'schema' => ['type' => 'string', 'pattern' => '^[a-f0-9]{64}$'],
+            'description' => 'challenge_id returned by the password login operation.',
+        ]];
+        $verifyLogin['requestBody']['content']['application/json']['example'] = ['code' => '123456', 'remember_device' => false];
+        $verifyLogin['responses']['200'] = $register['responses']['201'];
+        $verifyLogin['responses']['200']['description'] = 'Both login factors accepted. Copy access_token into Authorize for protected API calls.';
+        $verifyLogin['responses']['400'] = $this->messageResponse('The body contains malformed JSON.');
+        $verifyLogin['responses']['415'] = $this->messageResponse('A JSON content type is required.');
+        $verifyLogin['responses']['422'] = ['$ref' => '#/components/responses/ValidationException'];
+        $verifyLogin['responses']['429'] = $this->rateLimitResponse();
 
         $user = &$specification['paths']['/user']['get'];
         $user['summary'] = 'View your account';
@@ -129,8 +164,13 @@ class ApiSpecification
 
         $logout = &$specification['paths']['/logout']['post'];
         $logout['summary'] = 'Revoke the current token';
-        $logout['description'] = 'Revokes only the bearer token used for this request. Other tokens remain valid.';
+        $logout['description'] = 'Revokes the bearer token used for this request and the trusted-browser family identified by the presented cookie, then securely expires that cookie. Other tokens/devices remain valid.';
         $logout['responses']['204'] = ['description' => 'Token revoked. No response body.'];
+
+        $revokeDevices = &$specification['paths']['/trusted-devices']['delete'];
+        $revokeDevices['summary'] = 'Forget all your trusted browsers';
+        $revokeDevices['description'] = 'Requires the bearer token. Revokes only the authenticated user\'s trusted browsers, invalidates their pending login challenge and clears the browser cookie. Existing API tokens remain valid; this operation controls future password logins.';
+        $revokeDevices['responses']['204'] = ['description' => 'Trusted browsers revoked. No response body.'];
 
         $booking = &$specification['paths']['/events/{event}/reservations']['post'];
         $booking['summary'] = 'Reserve one place';

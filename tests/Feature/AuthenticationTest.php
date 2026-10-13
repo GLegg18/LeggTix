@@ -17,11 +17,13 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
 use Tests\Support\CreatesRegistrationProofs;
+use Tests\Support\CompletesLoginChallenges;
 
 class AuthenticationTest extends TestCase
 {
     use RefreshDatabase;
     use CreatesRegistrationProofs;
+    use CompletesLoginChallenges;
 
     private function registration(array $changes = []): array
     {
@@ -46,7 +48,7 @@ class AuthenticationTest extends TestCase
             $server['HTTP_AUTHORIZATION'] = 'Bearer '.$token;
         }
 
-        return $this->call($method, $uri, [], [], [], $server, json_encode($data, JSON_THROW_ON_ERROR));
+        return $this->call($method, $uri, [], [], [], $server, json_encode((object) $data, JSON_THROW_ON_ERROR));
     }
 
     public function test_registration_uses_normalized_email_and_returns_only_safe_fields_and_a_hashed_expiring_token(): void
@@ -89,8 +91,7 @@ class AuthenticationTest extends TestCase
     public function test_lifecycle_revokes_only_the_current_client_and_returns_the_authenticated_users_identity(): void
     {
         $tokenA = $this->api('POST', '/api/register', $this->registration())->assertCreated()->json('access_token');
-        $tokenB = $this->api('POST', '/api/login', ['email' => '  CUSTOMER@EXAMPLE.TEST ', 'password' => 'correct-password'])
-            ->assertOk()->json('access_token');
+        $tokenB = $this->completeLogin(['email' => '  CUSTOMER@EXAMPLE.TEST ', 'password' => 'correct-password'])->json('access_token');
         $other = User::factory()->create();
         $this->assertNotSame($tokenA, $tokenB);
         $this->assertDatabaseCount('personal_access_tokens', 2);
@@ -116,8 +117,10 @@ class AuthenticationTest extends TestCase
     public function test_every_existing_role_can_login_and_read_their_identity_without_role_change(string $role): void
     {
         $user = User::factory()->create(['role' => UserRole::from($role)]);
-        $token = $this->api('POST', '/api/login', ['email' => $user->email, 'password' => 'password', 'role' => 'admin'])
-            ->assertOk()->assertJsonPath('user.role', $role)->json('access_token');
+        $this->api('POST', '/api/login', ['email' => $user->email, 'password' => 'password', 'role' => 'admin'])
+            ->assertUnprocessable()->assertJsonValidationErrors('role');
+        $token = $this->completeLogin(['email' => $user->email, 'password' => 'password'])
+            ->assertJsonPath('user.role', $role)->json('access_token');
 
         $this->api('GET', '/api/user', [], $token)->assertOk()->assertJsonPath('data.role', $role);
         $this->assertSame($role, $user->fresh()->role->value);
@@ -178,7 +181,7 @@ class AuthenticationTest extends TestCase
         $password = str_repeat('é', 36);
         $this->api('POST', '/api/register', $this->registration(['password' => $password, 'password_confirmation' => $password]))
             ->assertCreated();
-        $this->api('POST', '/api/login', ['email' => 'customer@example.test', 'password' => $password])->assertOk();
+        $this->completeLogin(['email' => 'customer@example.test', 'password' => $password]);
         $this->assertTrue(Hash::check($password, User::sole()->password));
     }
 
@@ -192,7 +195,7 @@ class AuthenticationTest extends TestCase
         $this->assertTrue(Hash::check($password, $stored));
         $this->assertFalse(Hash::check('x', $stored));
         $this->assertSame((int) config('hashing.bcrypt.rounds'), password_get_info($stored)['options']['cost']);
-        $this->api('POST', '/api/login', ['email' => 'customer@example.test', 'password' => $password])->assertOk();
+        $this->completeLogin(['email' => 'customer@example.test', 'password' => $password]);
         $this->api('POST', '/api/login', ['email' => 'customer@example.test', 'password' => 'x'])
             ->assertUnprocessable()->assertJsonValidationErrors('email');
         $this->assertDatabaseCount('personal_access_tokens', 2);
@@ -386,8 +389,8 @@ class AuthenticationTest extends TestCase
         $this->assertDatabaseCount('personal_access_tokens', 0);
 
         $this->travel(61)->seconds();
-        $this->api('POST', '/api/login', ['email' => '  JÖHN@EXAMPLE.TEST  ', 'password' => 'password'])
-            ->assertOk()->assertJsonPath('user.id', $user->id)->assertJsonPath('user.email', 'john@example.test');
+        $this->completeLogin(['email' => '  JÖHN@EXAMPLE.TEST  ', 'password' => 'password'])
+            ->assertJsonPath('user.id', $user->id)->assertJsonPath('user.email', 'john@example.test');
         $this->assertDatabaseCount('personal_access_tokens', 1);
     }
 
@@ -403,8 +406,8 @@ class AuthenticationTest extends TestCase
 
         $this->api('POST', '/api/login', ['email' => 'jöhn@example.test', 'password' => 'password'])
             ->assertStatus(429)->assertHeader('Retry-After');
-        $this->api('POST', '/api/login', ['email' => '  JANE@EXAMPLE.TEST  ', 'password' => 'password'])
-            ->assertOk()->assertJsonPath('user.id', $other->id);
+        $this->completeLogin(['email' => '  JANE@EXAMPLE.TEST  ', 'password' => 'password'])
+            ->assertJsonPath('user.id', $other->id);
         $this->assertDatabaseCount('personal_access_tokens', 1);
         $this->assertDatabaseMissing('personal_access_tokens', ['tokenable_id' => $blocked->id]);
     }

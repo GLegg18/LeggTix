@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\User;
 use App\Models\RegistrationEmailVerification;
+use App\Models\LoginEmailVerification;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -60,6 +61,21 @@ class AppServiceProvider extends ServiceProvider
             return [
                 Limit::perMinute(30)->by('login:ip:'.$request->ip()),
                 Limit::perMinute(5)->by('login:identity:'.hash('sha256', $identityKey.'|'.$request->ip())),
+                Limit::perMinute(5)->by('login:account:'.hash('sha256', $identityKey)),
+                Limit::perHour(20)->by('login:account-hour:'.hash('sha256', $identityKey)),
+            ];
+        });
+
+        RateLimiter::for('login-email-verify', function (Request $request): array {
+            $challenge = (string) $request->route('challenge');
+            $userId = LoginEmailVerification::query()->where('challenge_id', $challenge)->value('user_id');
+            $target = $userId === null ? 'unknown:'.hash('sha256', $challenge) : 'user:'.$userId;
+
+            return [
+                Limit::perMinute(20)->by('login-email:verify:ip:'.$request->ip()),
+                Limit::perHour(100)->by('login-email:verify:ip-hour:'.$request->ip()),
+                Limit::perMinute(5)->by('login-email:verify:challenge:'.$challenge),
+                Limit::perHour(20)->by('login-email:verify:account-hour:'.$target),
             ];
         });
 

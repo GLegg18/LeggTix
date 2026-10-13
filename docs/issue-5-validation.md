@@ -4,7 +4,7 @@ Verified on 7 October 2026. Covers [registration and login #5](https://github.co
 
 This records the checks performed for this milestone. Use the [testing guide](testing.md) to run the current suite and the [manual test plan](manual-test-plan.md) for repeatable API checks.
 
-Issue #4 subsequently adds required email verification before new account creation and welcome email delivery. The [current authentication guide](authentication.md) and [email validation report](issue-4-email-validation.md) supersede this milestone's direct-registration contract; the historical checks below retain their original scope and date.
+Issue #4 subsequently adds required verification before signup, emailed login challenges for every account, optional seven-day trusted browsers and welcome email delivery. The [current authentication guide](authentication.md), [email validation report](issue-4-email-validation.md) and [login validation report](issue-4-login-validation.md) supersede this milestone's direct-registration/password-only-login contract; the historical checks below retain their original scope and date.
 
 ## Implemented scope
 

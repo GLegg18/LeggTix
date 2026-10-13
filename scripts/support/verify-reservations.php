@@ -99,6 +99,9 @@ if ($mode === 'create') {
             $user->tokens()->delete();
         }
 
+        DB::table('login_email_verifications')->whereIn('user_id', $userIds)->delete();
+        DB::table('trusted_devices')->whereIn('user_id', $userIds)->delete();
+
         User::whereIn('id', $userIds)->delete();
         EventType::whereKey($fixture['type_id'])->delete();
 
@@ -109,6 +112,8 @@ if ($mode === 'create') {
             'reservations' => DB::table('reservations')->whereIn('event_id', $eventIds)->count(),
             'waitlist_entries' => DB::table('waitlist_entries')->whereIn('event_id', $eventIds)->count(),
             'tokens' => DB::table('personal_access_tokens')->where('tokenable_type', User::class)->whereIn('tokenable_id', $userIds)->count(),
+            'login_verifications' => DB::table('login_email_verifications')->whereIn('user_id', $userIds)->count(),
+            'trusted_devices' => DB::table('trusted_devices')->whereIn('user_id', $userIds)->count(),
         ];
     });
 } else {

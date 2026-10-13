@@ -1,5 +1,7 @@
 # Issue #4 expanded email and registration validation
 
+Historical baseline: the 364-test results and direct password-login checks below were recorded before the required login email challenge and optional trusted-browser change. For the current login contract, use the authentication guide and the [login validation report](issue-4-login-validation.md). This report preserves the earlier evidence; its registration and transactional-email checks remain relevant.
+
 Verified on 13 October 2026 against the repository's PHP 8.4 / Laravel 13 / MySQL 8 / Redis / Docker Compose stack. This report covers generated verification, welcome and booking-confirmation emails and mandatory email ownership verification before signup. The earlier [Mailpit infrastructure report](issue-4-validation.md) remains the record for the original transport-only scope.
 
 ## Result and scope

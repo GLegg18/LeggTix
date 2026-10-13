@@ -1,6 +1,6 @@
 # Issue #9 review follow-up: morning acceptance checks
 
-These checks cover login identity throttling, fresh booking state, stable race verification, CI and the pinned Redis extension. Event discovery, cancellation and waitlist promotion retain their separate tickets. This checklist complements the [full reservation walkthrough](reservation-manual-test-plan.md); issue #9 should remain open until its remaining acceptance work is agreed.
+These repeatable checks retain the issue #9 review walkthrough and incorporate the current email-code login flow. Issue #9 is closed; this checklist does not change its status. The [issue #9 report](issue-9-validation.md) records earlier booking verification, while the [login validation report](issue-4-login-validation.md) records the later authentication checks. Event discovery, cancellation and waitlist promotion retain their separate tickets.
 
 Use only this local checkout and development database. Docker Desktop must be running with Linux containers and Compose v2 or newer. Open PowerShell and keep the same window for steps 4-10: its variables contain the captured fixture IDs and private tokens. PHP, Composer, MySQL and Redis run in Docker; Windows does not need separate installations. Windows PowerShell is sufficient for this checklist. The first image build needs network access.
 
@@ -12,7 +12,7 @@ Use only this local checkout and development database. Docker Desktop must be ru
    docker info --format '{{.OSType}}'
    $reviewNewEnvironment = -not (Test-Path -LiteralPath .env)
    if ($reviewNewEnvironment) { Copy-Item .env.example .env }
-   docker compose build app
+   docker compose build app worker
    docker compose run --rm --no-deps app composer install --no-interaction
    if ($reviewNewEnvironment) { docker compose run --rm --no-deps app php artisan key:generate }
    docker compose up -d
@@ -23,12 +23,13 @@ Use only this local checkout and development database. Docker Desktop must be ru
 
    ```powershell
    docker compose exec app php artisan migrate
+   docker compose restart worker
    docker compose ps
    (Invoke-WebRequest -UseBasicParsing http://localhost:8000/up).StatusCode
    docker compose exec app php -r "echo phpversion('redis'), PHP_EOL;"
    ```
 
-   Expect app/MySQL/Redis running, health `200`, and extension `6.3.0`. Migrations include the five domain tables, authentication tokens and failed-job storage. `up -d` recreates the app when the rebuilt image changes. Preserve an existing `.env` and key. No seeding, database reset or queue worker is required.
+   Expect app/MySQL/Redis/Mailpit/worker running, health `200`, and extension `6.3.0`. Migrations include domain data, authentication tokens, failed-job storage, email challenges and trusted browsers. Preserve an existing `.env` and key. No seeding or database reset is required; the worker delivers the login codes to [Mailpit](http://localhost:8025).
 
 2. **Run the isolated MySQL suite and confirm cleanup.**
 
@@ -107,23 +108,36 @@ Use only this local checkout and development database. Docker Desktop must be ru
    Invoke-ReviewRequest -Url $reviewLoginUrl -Body (@{ email = $reviewActorAlias; password = 'password' } | ConvertTo-Json -Compress)
    $reviewOtherResponse = Invoke-ReviewRequest -Url $reviewLoginUrl -Body (@{ email = $reviewOtherEmail; password = 'password' } | ConvertTo-Json -Compress)
    $reviewOtherResponse.Status
-   $reviewOtherLogin = $reviewOtherResponse.Body | ConvertFrom-Json
-   $reviewOtherLogin.user
+   $reviewOtherChallenge = $reviewOtherResponse.Body | ConvertFrom-Json
    Invoke-ReviewRequest -Url $reviewLoginUrl -Body (@{ email = @('invalid'); password = 'password' } | ConvertTo-Json -Compress)
    ```
 
-   Expect five `422` responses with `errors.email`; both subsequent actor spellings return `429` with nonempty `RetryAfter`, even with a correct password. The distinct other account returns `200` with its own fixture ID and role `regular_user`. Array email returns `422`; no account/token is created. If unrelated requests already consumed localhost's 30/minute IP limit, wait for the reported `RetryAfter` and repeat with fresh fixtures. Do not clear shared Redis keys.
+   Expect five `422` responses with `errors.email`; both subsequent actor spellings return `429` with nonempty `RetryAfter`, even with a correct password. The distinct other account returns `202` with its own login challenge and no token. Array email returns `422`. If unrelated requests already consumed localhost's 30/minute IP limit, wait for the reported `RetryAfter` and repeat with fresh fixtures. Do not clear shared Redis keys. Complete the other account's factor using the code addressed to its exact step-4 email in Mailpit:
+
+   ```powershell
+   $reviewOtherCode = Read-Host 'Enter the other fixture account login code from Mailpit'
+   $reviewOtherVerified = Invoke-ReviewRequest -Url ('http://localhost:8000/api/login/email-verifications/' + $reviewOtherChallenge.challenge_id + '/verify') -Body (@{ code = $reviewOtherCode; remember_device = $false } | ConvertTo-Json -Compress)
+   $reviewOtherVerified.Status
+   $reviewOtherLogin = $reviewOtherVerified.Body | ConvertFrom-Json
+   $reviewOtherLogin.user
+   ```
+
+   Expect `200` with the other fixture ID and `regular_user`. Keep the response in memory; do not print its bearer token.
 
    Wait at least 61 seconds before the next login (use a clock), then run:
 
    ```powershell
    $reviewActorResponse = Invoke-ReviewRequest -Url $reviewLoginUrl -Body (@{ email = "  $($reviewActorAlias.ToUpperInvariant())  "; password = 'password' } | ConvertTo-Json -Compress)
    $reviewActorResponse.Status
-   $reviewActorLogin = $reviewActorResponse.Body | ConvertFrom-Json
+   $reviewActorChallenge = $reviewActorResponse.Body | ConvertFrom-Json
+   $reviewActorCode = Read-Host 'Enter the actor fixture account login code from Mailpit'
+   $reviewActorVerified = Invoke-ReviewRequest -Url ('http://localhost:8000/api/login/email-verifications/' + $reviewActorChallenge.challenge_id + '/verify') -Body (@{ code = $reviewActorCode; remember_device = $false } | ConvertTo-Json -Compress)
+   $reviewActorVerified.Status
+   $reviewActorLogin = $reviewActorVerified.Body | ConvertFrom-Json
    $reviewActorLogin.user
    ```
 
-   Expect `200`, the original `actor` ID, and the canonical unaccented fixture email. Both successful logins create independent tokens; cleanup revokes them. Account-wide limits across multiple IPs remain public-launch hardening, not evidence from this single-IP check.
+   Expect `202` at the password step, then `200` after its emailed code, with the original `actor` ID and canonical unaccented fixture email. Each completed login creates an independent token; cleanup revokes them. Shared account limits across IPs are implemented; this particular walkthrough exercises the single-IP identity budget. See the login report for executed cross-IP and trusted-browser checks.
 
 7. **Check the interactive documentation, authentication boundary and request validation.** Open [Swagger](http://localhost:8000/docs/api), allow several seconds for schema generation, and open the browser developer tools (**F12**, then **Console** and **Network**). Confirm the page has no relevant JavaScript error or failed local asset request; `/docs/api.json` returns `200`.
 
@@ -158,10 +172,11 @@ Use only this local checkout and development database. Docker Desktop must be ru
    docker compose logs --tail 80 app
    docker compose logs --tail 80 mysql
    docker compose logs --tail 80 redis
+   docker compose logs --tail 80 worker
    docker compose exec app php artisan queue:failed
    ```
 
-   Expect `PASS Redis-login-throttle`, HTTP/authentication/payload/real-multipart checks, booking/replay/capacity/FIFO checks, Redis actor throttling, persisted invariants, and all-zero fixture cleanup; exit code `0`. The runner creates and removes its own separate tagged fixtures. Localhost's IP limits are shared, so allow a fresh minute after heavy manual testing. Logs must not show an unexpected exception during these requests. Expect `queue:failed` to report `No failed jobs found.` on a clean setup. A missing-table exception requires applying pending migrations with `docker compose exec app php artisan migrate`, then repeating the check. Existing failed jobs should be inspected separately. Booking dispatches no queue job and needs no queue worker. If the live runner reports cleanup failure, copy its printed recovery command exactly.
+   Expect `PASS Redis-login-throttle`, HTTP/authentication/payload/real-multipart checks, booking/replay/capacity/FIFO checks, Redis actor throttling, persisted invariants, and all-zero fixture cleanup; exit code `0`. This booking runner tests wrong-password throttling and uses trusted local fixture tokens for allocation; the dedicated login acceptance exercises successful OTP login. Localhost's IP limits are shared, so allow a fresh minute after heavy manual testing. Logs must show no unexpected exception. Expect `queue:failed` to report `No failed jobs found.` on a clean setup. A missing table requires pending migrations. Booking confirmation now uses the `emails` worker; its jobs skip removed fixtures. If cleanup fails, copy the exact recovery command printed by the runner.
 
 10. **Remove only the manual walkthrough's fixtures and tokens.** From the same repository-root PowerShell window:
 
@@ -171,7 +186,7 @@ Use only this local checkout and development database. Docker Desktop must be ru
     Remove-Item -LiteralPath $reviewRecovery
     $reviewClient.Dispose()
     Set-Clipboard -Value ''
-    Remove-Variable reviewFixture,reviewFixtureJson,reviewActorResponse,reviewActorLogin,reviewOtherResponse,reviewOtherLogin -ErrorAction SilentlyContinue
+    Remove-Variable reviewFixture,reviewFixtureJson,reviewActorResponse,reviewActorLogin,reviewOtherResponse,reviewOtherLogin,reviewActorChallenge,reviewOtherChallenge,reviewActorCode,reviewOtherCode,reviewActorVerified,reviewOtherVerified -ErrorAction SilentlyContinue
     ```
 
-    Expect every cleanup count zero: reservations, waitlist entries, events, tokens, users and type. The helper validates the tag and captured identities, locks fixture events, and leaves unrelated data and Redis counters intact. If PowerShell closes before cleanup, reopen it at the repository root, find this run's `storage/app/private/issue9-live-<tag>.json`, and substitute that exact full path for `$reviewRecovery` in the first command. Keep recovery metadata until zero counts are confirmed. Stop development services if wanted with `docker compose down`; this preserves the MySQL volume. Do not use `--volumes` or `migrate:fresh` on this development stack.
+    Expect every cleanup count zero: reservations, waitlist entries, events, tokens, login challenges, trusted browsers, users and type. The helper validates the tag and captured identities, locks fixture events, and leaves unrelated data and Redis counters intact. Delete only Mailpit previews addressed to this run's exact fixture emails if inbox cleanup is desired; never purge the shared inbox. If PowerShell closes before cleanup, reopen it at the repository root and use this run's exact `storage/app/private/issue9-live-<tag>.json` path. Keep recovery metadata until zero counts are confirmed. `docker compose down` stops development services and preserves MySQL data; do not use `--volumes` or `migrate:fresh` on this stack.

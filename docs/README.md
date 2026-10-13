@@ -6,7 +6,7 @@ Start with the [database design decision and research note](database-design.md),
 
 The [ER diagram](diagrams/leggtix-database-er.svg) is a portable visual of the five MVP domain tables. The note remains the source for complete fields and constraints.
 
-The [authentication API guide](authentication.md) documents registration, login, current-user and logout from [issue #5](https://github.com/GLegg18/LeggTix/issues/5), expanded in [issue #4](https://github.com/GLegg18/LeggTix/issues/4) with required pre-account email verification. It includes token expiry, rate limits and the MySQL/SQLite verification boundary.
+The [authentication API guide](authentication.md) documents registration, login, current-user and logout from [issue #5](https://github.com/GLegg18/LeggTix/issues/5), expanded in [issue #4](https://github.com/GLegg18/LeggTix/issues/4) with pre-account email verification, emailed login challenges and optional seven-day trusted browsers. It includes token expiry, rate limits and the MySQL/SQLite verification boundary.
 
 The [event model guide](events.md) documents the models, relationships, protected fields, UTC scheduling, lifecycle read helpers and factory states for [issue #6](https://github.com/GLegg18/LeggTix/issues/6). The tester's [event manual plan](event-manual-test-plan.md) supplies console checks and expected outcomes. The [issue #6 verification report](issue-6-validation.md) records the checks and review outcomes for that model layer.
 
@@ -18,11 +18,13 @@ The [testing guide](testing.md) explains the disposable Docker runner, argument 
 
 The [local email preview guide](../README.md#local-email-preview) documents Mailpit's inbox, Laravel SMTP configuration and the isolated queued-mail smoke check. The [issue #4 verification report](issue-4-validation.md) records acceptance, security review and manual checks for that local service.
 
-The [transactional email guide](transactional-email.md) covers signup-code, welcome and booking-confirmation templates, successful-workflow hooks, the dedicated worker and delivery limits. The [email validation report](issue-4-email-validation.md) records the expanded behavior's checks and review findings.
+The [transactional email guide](transactional-email.md) covers signup-code, login-code, welcome and booking-confirmation templates, successful-workflow hooks, the dedicated worker and delivery limits. The [email validation report](issue-4-email-validation.md) records the earlier signup/booking milestone; login acceptance is recorded separately below.
 
-The [registration verification and MFA scope note](mfa-assessment.md) records the decision to require email ownership before account creation. Login remains password-based; welcome emails are separate from signup verification codes.
+The [email verification and login security scope note](mfa-assessment.md) records required pre-account ownership, emailed login challenges for all accounts and optional seven-day trusted browsers. The trusted-device cookie still requires a password; welcome emails are separate from authentication codes.
 
 The [registration email verification guide](registration-email-verification.md) details the three-step signup contract, code/proof expiry, mailbox/IP limits, database locking and temporary-state cleanup.
+
+The [login security guide](login-email-verification.md) covers emailed login codes, the seven-day trusted-device cookie, revocation and the API-token rollout policy. The [login validation report](issue-4-login-validation.md) records tests, review findings and manual acceptance.
 
 The [issue #5 verification report](issue-5-validation.md) records executed checks, review findings and verification limits. The guides describe how to repeat the checks; the report records what was verified.
 

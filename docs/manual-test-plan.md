@@ -39,7 +39,7 @@ docker compose exec redis redis-cli ping
 docker compose exec app php artisan migrate:status
 ```
 
-**Expected:** all eight migrations say `Ran`. They create users, event types, events, reservations, waitlist entries, authentication tokens, failed-job storage and temporary registration email verifications. If an existing checkout shows a pending migration, run `docker compose exec app php artisan migrate`, then check the status again.
+**Expected:** all nine migrations say `Ran`. They create users, event types, events, reservations, waitlist entries, authentication tokens, failed-job storage, temporary registration/login verifications and trusted-browser records. If an existing checkout shows a pending migration, run `docker compose exec app php artisan migrate`, then check the status again. Restart the queue worker with `docker compose restart worker` after updating application code.
 
 ## 3. Run the automated tests
 
@@ -47,7 +47,7 @@ docker compose exec app php artisan migrate:status
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1
 ```
 
-**Expected:** all tests pass. The [email and registration verification report](issue-4-email-validation.md) records the current suite size and results; runtime varies by machine.
+**Expected:** all tests pass. The [login and trusted-browser validation report](issue-4-login-validation.md) records the current suite size and results; runtime varies by machine.
 
 The script makes a fresh test database, runs migrations and creates the test fixtures, then removes its temporary containers and database. No manual database creation, root password or `.env` change is needed. The execution-policy override applies only to this PowerShell process. The first run downloads and builds dependencies; the build output is normal.
 
@@ -169,7 +169,7 @@ The user fields should be exactly `id`, `name`, `email` and `role`. The made-up 
 
 ## 8. Log in as a second client
 
-Think of this as logging in from another device. It uses the same account but gets its own token.
+Think of this as logging in from another device. Every new login, including demo accounts, requires the password and an emailed code unless that browser was explicitly remembered after a previous successful code. This PowerShell walkthrough uses a code each time and does not opt into browser trust.
 
 ```powershell
 $qaLoginBody = @{
@@ -178,15 +178,32 @@ $qaLoginBody = @{
 } | ConvertTo-Json
 
 $qaLoginResponse = Invoke-WebRequest -UseBasicParsing -Method Post -Uri "$qaBase/api/login" -ContentType 'application/json' -Body $qaLoginBody
-$qaClientB = $qaLoginResponse.Content | ConvertFrom-Json
-$qaHeadersB = @{ Authorization = "Bearer $($qaClientB.access_token)" }
+$qaLoginChallenge = $qaLoginResponse.Content | ConvertFrom-Json
 
 $qaLoginResponse.StatusCode
+$qaLoginChallenge.challenge_id
+$qaLoginChallenge.expires_at
+```
+
+**Expected:** `202`, a challenge ID and a ten-minute expiry. There must be no user or access token in this response; the password has not completed login.
+
+Refresh the Mailpit search for your exact `$qaEmail`. Open the newest **Your LeggTix login code** message. Its request reference must match `$qaLoginChallenge.challenge_id`. Copy the six digits, including any leading zero, then run:
+
+```powershell
+$qaLoginCode = Read-Host 'Paste this login challenge code from Mailpit'
+$qaLoginVerifyUrl = "$qaBase/api/login/email-verifications/$($qaLoginChallenge.challenge_id)/verify"
+$qaLoginProofResponse = Invoke-WebRequest -UseBasicParsing -Method Post -Uri $qaLoginVerifyUrl -ContentType 'application/json' -Body (@{ code = $qaLoginCode; remember_device = $false } | ConvertTo-Json)
+$qaClientB = $qaLoginProofResponse.Content | ConvertFrom-Json
+$qaHeadersB = @{ Authorization = "Bearer $($qaClientB.access_token)" }
+
+$qaLoginProofResponse.StatusCode
 $qaClientB.user
 $qaAccount.access_token -ne $qaClientB.access_token
 ```
 
-**Expected:** `200`, the same user ID as registration, and `True` because the two tokens differ. Email spaces/casing should not prevent login.
+**Expected:** `200`, the same user ID as registration, and `True` because the two tokens differ. Email spaces/casing should not prevent login. The code is one-use; repeating this verification must return `422` and issue no extra token. Wrong/expired codes also return `422`, and five wrong guesses disable a code. To resend, repeat the password request after at least 61 seconds; the replacement challenge invalidates the previous code.
+
+For opt-in **Remember this browser for seven days**, use the real browser walkthrough in the [login validation report](issue-4-login-validation.md#manual-test-plan). It checks Chrome's automatic Secure/HttpOnly cookie handling. A CLI client's cookie behavior on plain HTTP is not a substitute for that browser check. The cookie never authenticates `/api/user` or bookings by itself; their bearer tokens remain required.
 
 ## 9. Log out the first client
 
@@ -307,7 +324,7 @@ $qaFinalLogout = Invoke-WebRequest -UseBasicParsing -Method Post -Uri "$qaBase/a
 $qaFinalLogout.StatusCode
 ```
 
-**Expected:** `204`. The demo account remains, with both tokens revoked. It is safe to repeat the walkthrough: step 5 chooses a new email. In Mailpit, keep the search for your exact `$qaEmail` and delete only the two matching messages if you do not need them. Do not use the global inbox deletion command. Temporary verification records are pruned by the documented scheduler; no database reset is needed.
+**Expected:** `204`. The demo account remains, with both tokens revoked. It is safe to repeat the walkthrough: step 5 chooses a new email. In Mailpit, keep the search for your exact `$qaEmail` and delete only its matching registration-code, welcome and login-code messages if you do not need them. Do not use the global inbox deletion command. Temporary verification records are pruned by the documented scheduler; no database reset is needed.
 
 If you are done with Docker for now, you can stop it with:
 
@@ -319,10 +336,10 @@ This stops the services and keeps the database data. Leave the containers runnin
 
 ## What a complete pass means
 
-- Five running containers; app health `200`; Redis `PONG`; eight migrations `Ran`.
+- Five running containers; app health `200`; Redis `PONG`; nine migrations `Ran`.
 - Automated suite: all tests passed; use the latest verification report for the recorded test and assertion counts.
-- Code request `202`; wrong code `422`; correct code `200`; proof-backed registration `201`; current user/login `200`; logout `204`.
-- Verification and welcome emails captured by Mailpit for the exact test recipient; no welcome on rejected signup or login.
+- Signup-code request `202`; wrong code `422`; correct code `200`; proof-backed registration `201`; password login `202` without a token; correct login-code `200`; current user `200`; logout `204`.
+- Registration verification, welcome and login-code emails captured by Mailpit for the exact test recipient; no welcome on rejected signup or login.
 - Guest/old token `401`; invalid input/privilege attempt `422`; excessive attempts `429`.
 - Logging out one token leaves the other token usable.
 

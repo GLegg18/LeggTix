@@ -51,7 +51,7 @@ docker compose exec app php artisan migrate --seed
 
 Preparing the key before `up` ensures Compose loads it from `.env` when creating the app container. The initial dependency installation also makes Artisan available before the first migration.
 
-Open [http://localhost:8000/up](http://localhost:8000/up). Laravel's health endpoint should return a successful response. Migrations create `users`, `event_types`, `events`, `reservations`, `waitlist_entries`, Sanctum's `personal_access_tokens`, Laravel's `failed_jobs` and transient `registration_email_verifications`, alongside migration history. Seeding adds the demo accounts, types, events and reservations below.
+Open [http://localhost:8000/up](http://localhost:8000/up). Laravel's health endpoint should return a successful response. Migrations create `users`, `event_types`, `events`, `reservations`, `waitlist_entries`, Sanctum's `personal_access_tokens`, Laravel's `failed_jobs`, transient registration/login verifications and trusted-browser records, alongside migration history. Seeding adds the demo accounts, types, events and reservations below.
 
 Redis holds pending queued work; MySQL stores failed-job records. After applying migrations, `docker compose exec app php artisan queue:failed` should report `No failed jobs found.` on a clean setup. Existing checkouts pick up new migrations with `docker compose exec app php artisan migrate`. Registration and successful API bookings queue [transactional emails](docs/transactional-email.md) for the Compose `worker`, which consumes only the `emails` queue. Mailpit captures local email at [http://localhost:8025](http://localhost:8025); the [local email preview guide](#local-email-preview) includes configuration and a queued-mail check.
 
@@ -63,7 +63,7 @@ Use the login operation to obtain a token, then click **Authorize** and paste th
 
 The [authentication guide](docs/authentication.md) and [booking guide](docs/reservations.md) retain implementation notes and reproducible checks. The API returns JSON errors even when a client omits its `Accept` header.
 
-New accounts must [verify email ownership before registration](docs/registration-email-verification.md): request an email code, read it in Mailpit, verify the code, then submit the returned one-use registration proof with name/password. The Swagger explorer exposes each step. Existing and demo accounts still log in directly with their password; this registration check does not add a second login factor.
+New accounts must [verify email ownership before registration](docs/registration-email-verification.md): request an email code, read it in Mailpit, verify the code, then submit the returned one-use registration proof with name/password. The Swagger explorer exposes each step. All later logins, including existing/demo accounts, require the [email login factor](docs/login-email-verification.md). Browsers may opt in to seven days of trust after a successful code; the password remains required.
 
 After migrating, use the [testing guide](docs/testing.md) for the isolated Docker runner and the [manual acceptance checks](docs/manual-test-plan.md) for the live app walkthrough and expected results.
 
@@ -92,14 +92,16 @@ All five demo accounts use **`demo-password`** when first created:
 These are local review credentials, including the privileged admin account, and must never be used for production. The demo seeder runs only with `APP_ENV=local` or `testing`; other environments are rejected even with `--force`. It creates no access token. Use the ordinary login endpoint, for example in PowerShell:
 
 ```powershell
-$demoLogin = Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/login -ContentType 'application/json' -Body (@{
+$demoLoginStart = Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/login -ContentType 'application/json' -Body (@{
     email = 'demo.user@example.test'
     password = 'demo-password'
 } | ConvertTo-Json)
+$demoLoginCode = Read-Host 'Enter the six-digit login code from Mailpit'
+$demoLogin = Invoke-RestMethod -Method Post -Uri ('http://localhost:8000/api/login/email-verifications/' + $demoLoginStart.challenge_id + '/verify') -ContentType 'application/json' -Body (@{ code = $demoLoginCode; remember_device = $false } | ConvertTo-Json)
 $demoLogin.user
 ```
 
-Expect the customer profile and role `regular_user`. Change the email to `demo.owner@example.test` to log in as the organiser. The response also contains the bearer token described in the [authentication guide](docs/authentication.md).
+The password step returns `202` with no bearer token. After entering the Mailpit code, expect the customer profile and role `regular_user`. Change the email to `demo.owner@example.test` to log in as the organiser using the same two steps. The final response contains the bearer token described in the [authentication guide](docs/authentication.md).
 
 Five active types (`concert`, `live-show`, `film-screening`, `workshop`, `meetup`) and eight organiser-owned events are created. Existing workshop/meetup fixtures remain available for older local checkouts.
 
@@ -235,7 +237,7 @@ With these settings, messages are captured by Mailpit and no real recipient deli
 
 ## Current scope
 
-Registration creates only `regular_user` accounts after a required email-code check. A code expires after 10 minutes and allows five failed guesses; the resulting registration proof expires after 10 minutes and is consumed once with account/token creation. Login issues a Laravel Sanctum token that expires after 24 hours; logout revokes the current token. The [authentication guide](docs/authentication.md) documents validation, response contracts, token handling, and rate limits.
+Registration creates only `regular_user` accounts after a required email-code check. A code expires after 10 minutes and allows five failed guesses; the resulting registration proof expires after 10 minutes and is consumed once with account/token creation. Login requires the password plus email code or a valid trusted-browser cookie before issuing a 24-hour Sanctum token. Logout revokes the current token and presented browser trust. The [authentication guide](docs/authentication.md) documents validation, response contracts, token handling, and rate limits.
 
 The [MVP schema](docs/database-design.md) is implemented with MySQL constraints, generated active uniqueness keys, restricted foreign keys, and UTC `DATETIME(6)` domain timestamps. [Event models and factories](docs/events.md) provide ownership/type relationships, typed lifecycle statuses, scheduling and fixture states for issue #6. Local demo seeders provide the review accounts, sample types/events and confirmed reservations above.
 
@@ -243,7 +245,7 @@ The [MVP schema](docs/database-design.md) is implemented with MySQL constraints,
 
 Event management, reservation cancellation/history, waitlist join/leave/promotion and notifications, and password reset remain follow-on work. Booking is the first domain endpoint.
 
-Registration-code, welcome and reservation-confirmation emails use reusable HTML and plain-text Blade templates populated when their jobs run. No email-body table is stored. The [registration verification guide](docs/registration-email-verification.md) describes required ownership proof and transient encrypted code state. The [transactional email guide](docs/transactional-email.md) describes success hooks, stale-message suppression, retries and delivery limits; waitlist promotion notifications remain separate work.
+Registration-code, login-code, welcome and reservation-confirmation emails use reusable HTML and plain-text Blade templates populated when their jobs run. No email-body table is stored. The [registration verification guide](docs/registration-email-verification.md) describes required ownership proof; the [login verification guide](docs/login-email-verification.md) documents all-account email codes, optional Secure HttpOnly browser trust and rollout limits for existing API tokens. The [transactional email guide](docs/transactional-email.md) describes success hooks, stale-message suppression, retries and delivery limits; waitlist promotion notifications remain separate work.
 
 ## Design documentation
 
