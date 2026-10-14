@@ -58,7 +58,7 @@ class ApiDocumentationTest extends TestCase
 
         $initializerResponse = $this->get('/docs/api/assets/api-documentation.js')->assertOk();
         $initializer = file_get_contents($initializerResponse->baseResponse->getFile()->getPathname());
-        foreach (['url: "/docs/api.json"', 'persistAuthorization: false', 'queryConfigEnabled: false', 'validatorUrl: null', 'request.redirect = "error"', 'request.credentials = "omit"'] as $setting) {
+        foreach (['url: "/docs/api.json"', 'persistAuthorization: false', 'queryConfigEnabled: false', 'validatorUrl: null', 'request.redirect = "error"', 'request.credentials = "same-origin"', 'withCredentials: true'] as $setting) {
             $this->assertStringContainsString($setting, $initializer);
         }
         $this->assertStringNotContainsString('localStorage', $initializer);
@@ -111,7 +111,7 @@ class ApiDocumentationTest extends TestCase
                 }
             }
         }
-        $this->assertCount(6, $operations);
+        $this->assertCount(10, $operations);
         $this->assertEqualsCanonicalizing($routes, $operations);
         $bearerNames = [];
 
@@ -121,10 +121,10 @@ class ApiDocumentationTest extends TestCase
             }
         }
         $this->assertNotEmpty($bearerNames);
-        foreach ([['/health', 'get'], ['/register', 'post'], ['/login', 'post']] as [$path, $method]) {
+        foreach ([['/health', 'get'], ['/register', 'post'], ['/login', 'post'], ['/login/email-verifications/{challenge}/verify', 'post'], ['/registration/email-verifications', 'post'], ['/registration/email-verifications/{challenge}/verify', 'post']] as [$path, $method]) {
             $this->assertSame([], $spec['paths'][$path][$method]['security'] ?? $spec['security'] ?? [], $path.' must be public.');
         }
-        foreach ([['/user', 'get'], ['/logout', 'post'], ['/events/{event}/reservations', 'post']] as [$path, $method]) {
+        foreach ([['/user', 'get'], ['/logout', 'post'], ['/trusted-devices', 'delete'], ['/events/{event}/reservations', 'post']] as [$path, $method]) {
             $security = $spec['paths'][$path][$method]['security'] ?? $spec['security'] ?? [];
             $declared = array_merge(...array_map('array_keys', $security));
             $this->assertNotEmpty(array_intersect($bearerNames, $declared), $path.' must require bearer authentication.');
@@ -139,7 +139,7 @@ class ApiDocumentationTest extends TestCase
         $this->assertFalse($user['additionalProperties']);
         $this->assertEqualsCanonicalizing(['regular_user', 'organiser', 'admin'], $user['properties']['role']['enum']);
 
-        foreach ([['/register', '201'], ['/login', '200']] as [$path, $status]) {
+        foreach ([['/register', '201'], ['/login', '200'], ['/login/email-verifications/{challenge}/verify', '200']] as [$path, $status]) {
             $operation = $spec['paths'][$path]['post'];
             $schema = $this->resolve($operation['responses'][$status]['content']['application/json']['schema'], $spec);
             $this->assertEqualsCanonicalizing(['user', 'access_token', 'token_type', 'expires_at'], array_keys($schema['properties']));
@@ -150,6 +150,8 @@ class ApiDocumentationTest extends TestCase
         }
         $registration = $this->resolve($spec['paths']['/register']['post']['requestBody']['content']['application/json']['schema'], $spec);
         $this->assertContains('password_confirmation', $registration['required']);
+        $this->assertContains('registration_token', $registration['required']);
+        $this->assertTrue($registration['properties']['registration_token']['writeOnly']);
         $this->assertTrue($registration['properties']['password']['writeOnly']);
         $this->assertTrue($registration['properties']['password_confirmation']['writeOnly']);
         $this->assertArrayNotHasKey('role', $registration['properties']);

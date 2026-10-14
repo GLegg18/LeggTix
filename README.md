@@ -7,6 +7,7 @@ LeggTix is an API-first event reservation and waitlist service. The backend is a
 - PHP 8.4 and Laravel 13
 - MySQL 8 for application data
 - Redis for cache and queue connections
+- Mailpit 1.31.4 for local email preview
 - PHP Redis extension pinned to 6.3.0 in the Dockerfile
 - Docker Compose for the local services
 - PHPUnit for the Laravel test runner
@@ -35,7 +36,7 @@ From the repository root, prepare dependencies and the application key before st
 ```powershell
 $leggTixNewEnvironment = -not (Test-Path -LiteralPath .env)
 if ($leggTixNewEnvironment) { Copy-Item .env.example .env }
-docker compose build app
+docker compose build app worker
 docker compose run --rm --no-deps app composer install --no-interaction
 if ($leggTixNewEnvironment) { docker compose run --rm --no-deps app php artisan key:generate }
 docker compose up -d
@@ -50,9 +51,9 @@ docker compose exec app php artisan migrate --seed
 
 Preparing the key before `up` ensures Compose loads it from `.env` when creating the app container. The initial dependency installation also makes Artisan available before the first migration.
 
-Open [http://localhost:8000/up](http://localhost:8000/up). Laravel's health endpoint should return a successful response. Migrations create `users`, `event_types`, `events`, `reservations`, `waitlist_entries`, Sanctum's `personal_access_tokens` and Laravel's `failed_jobs`, alongside migration history. Seeding adds the demo accounts, types, events and reservations below.
+Open [http://localhost:8000/up](http://localhost:8000/up). Laravel's health endpoint should return a successful response. Migrations create `users`, `event_types`, `events`, `reservations`, `waitlist_entries`, Sanctum's `personal_access_tokens`, Laravel's `failed_jobs`, transient registration/login verifications and trusted-browser records, alongside migration history. Seeding adds the demo accounts, types, events and reservations below.
 
-Redis holds pending queued work; MySQL stores failed-job records. After applying migrations, `docker compose exec app php artisan queue:failed` should report `No failed jobs found.` on a clean setup. Existing checkouts pick up new migrations with `docker compose exec app php artisan migrate`. The current booking flow dispatches no queued job and needs no queue worker.
+Redis holds pending queued work; MySQL stores failed-job records. After applying migrations, `docker compose exec app php artisan queue:failed` should report `No failed jobs found.` on a clean setup. Existing checkouts pick up new migrations with `docker compose exec app php artisan migrate`. Registration and successful API bookings queue [transactional emails](docs/transactional-email.md) for the Compose `worker`, which consumes only the `emails` queue. Mailpit captures local email at [http://localhost:8025](http://localhost:8025); the [local email preview guide](#local-email-preview) includes configuration and a queued-mail check.
 
 Open the [interactive API explorer](http://localhost:8000/docs/api) to browse requests, response schemas and errors, and send requests to the running app. Its [OpenAPI JSON](http://localhost:8000/docs/api.json) can also be imported into an API client. The explorer is available only in local/test environments with development dependencies installed.
 
@@ -61,6 +62,8 @@ Allow several seconds for the schema to generate when opening the explorer.
 Use the login operation to obtain a token, then click **Authorize** and paste the raw `access_token`; Swagger adds the `Bearer` prefix. Authorization lasts only for the current page session. **Try it out** sends real requests to your local database. Booking needs an existing event ID; event discovery and management endpoints are still separate work.
 
 The [authentication guide](docs/authentication.md) and [booking guide](docs/reservations.md) retain implementation notes and reproducible checks. The API returns JSON errors even when a client omits its `Accept` header.
+
+New accounts must [verify email ownership before registration](docs/registration-email-verification.md): request an email code, read it in Mailpit, verify the code, then submit the returned one-use registration proof with name/password. The Swagger explorer exposes each step. All later logins, including existing/demo accounts, require the [email login factor](docs/login-email-verification.md). Browsers may opt in to seven days of trust after a successful code; the password remains required.
 
 After migrating, use the [testing guide](docs/testing.md) for the isolated Docker runner and the [manual acceptance checks](docs/manual-test-plan.md) for the live app walkthrough and expected results.
 
@@ -89,14 +92,16 @@ All five demo accounts use **`demo-password`** when first created:
 These are local review credentials, including the privileged admin account, and must never be used for production. The demo seeder runs only with `APP_ENV=local` or `testing`; other environments are rejected even with `--force`. It creates no access token. Use the ordinary login endpoint, for example in PowerShell:
 
 ```powershell
-$demoLogin = Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/login -ContentType 'application/json' -Body (@{
+$demoLoginStart = Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/login -ContentType 'application/json' -Body (@{
     email = 'demo.user@example.test'
     password = 'demo-password'
 } | ConvertTo-Json)
+$demoLoginCode = Read-Host 'Enter the six-digit login code from Mailpit'
+$demoLogin = Invoke-RestMethod -Method Post -Uri ('http://localhost:8000/api/login/email-verifications/' + $demoLoginStart.challenge_id + '/verify') -ContentType 'application/json' -Body (@{ code = $demoLoginCode; remember_device = $false } | ConvertTo-Json)
 $demoLogin.user
 ```
 
-Expect the customer profile and role `regular_user`. Change the email to `demo.owner@example.test` to log in as the organiser. The response also contains the bearer token described in the [authentication guide](docs/authentication.md).
+The password step returns `202` with no bearer token. After entering the Mailpit code, expect the customer profile and role `regular_user`. Change the email to `demo.owner@example.test` to log in as the organiser using the same two steps. The final response contains the bearer token described in the [authentication guide](docs/authentication.md).
 
 Five active types (`concert`, `live-show`, `film-screening`, `workshop`, `meetup`) and eight organiser-owned events are created. Existing workshop/meetup fixtures remain available for older local checkouts.
 
@@ -153,15 +158,17 @@ docker compose exec app php artisan migrate --seed
 ## Troubleshooting
 
 - If Compose cannot connect to Docker, start Docker Desktop and wait for its engine to finish starting, then retry `docker compose up --build -d`.
-- If a port is already in use, stop the other service using port `8000`, `3306`, or `6379`, or change the host port while keeping the `127.0.0.1` loopback address in the corresponding mapping in `docker-compose.yml`.
+- If a port is already in use, stop the other service using port `8000`, `3306`, `6379`, or `8025`, or change the host port while keeping the `127.0.0.1` loopback address in the corresponding mapping in `docker-compose.yml`.
 - If MySQL is unhealthy or the app reports a database connection error, check `docker compose ps` and `docker compose logs mysql`; the app waits for MySQL's health check. Confirm `.env` has the Compose defaults (`DB_HOST=mysql` and matching database credentials), then retry `docker compose up -d`.
 - For application startup errors, inspect `docker compose logs app`. The app container runs `composer install` on startup, so dependency installation errors may require network access or a later retry.
 - If you copied `.env` yourself and its `APP_KEY` is empty, run `docker compose run --rm --no-deps app php artisan key:generate`, then `docker compose up -d --force-recreate app`. Recreating the app reloads `env_file` values after `.env` changes; a plain restart retains the old container environment. Preserve an existing application key.
+- If the inbox is unavailable, check `docker compose ps` and `docker compose logs mailpit`. For missing email or SMTP errors, follow the configuration/cache steps under [local email preview](#local-email-preview); inside containers, the SMTP host is `mailpit`, not `localhost`.
 
 ## Useful commands
 
 ```powershell
 docker compose logs -f app
+docker compose logs -f worker
 docker compose exec app php artisan
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1
 docker compose exec app php artisan migrate:status
@@ -185,15 +192,60 @@ Controllers should validate requests and coordinate small action/service classes
 
 `.env.example` contains development-only defaults for the Compose network. Copy it to `.env` before starting the stack. Do not put real credentials in `.env.example` or commit a populated `.env` file. The MySQL credentials in the example are local container credentials only.
 
+## Local email preview
+
+[Issue #4](https://github.com/GLegg18/LeggTix/issues/4) adds [Mailpit](https://mailpit.axllent.org/docs/install/docker/), pinned to [v1.31.4](https://github.com/axllent/mailpit/releases/tag/v1.31.4). Open [http://localhost:8025](http://localhost:8025) to inspect captured messages. Compose publishes the inbox only on `127.0.0.1` and sets Mailpit's [host allowlist](https://mailpit.axllent.org/docs/configuration/http/#dns-rebinding-mitigation) for local/container access. SMTP port `1025` is available only inside the Compose network. Laravel and any worker launched in the `app` container use the service name `mailpit` for SMTP.
+
+New checkouts inherit these `.env.example` settings. For an existing checkout, update only the mail values in your `.env`, preserving its application key and other settings:
+
+```dotenv
+MAIL_MAILER=smtp
+MAIL_SCHEME=smtp
+MAIL_URL=null
+MAIL_HOST=mailpit
+MAIL_PORT=1025
+MAIL_USERNAME=null
+MAIL_PASSWORD=null
+MAIL_FROM_ADDRESS="hello@example.com"
+MAIL_FROM_NAME="${APP_NAME}"
+```
+
+Mailpit's local SMTP listener requires no authentication or TLS. `MAIL_URL` must be unset or `null`: an old SMTP URL overrides the individual host/port settings. Laravel 13 supplies the SMTP configuration through its framework defaults, so no published `config/mail.php` is needed. After changing `.env`, reload the container environment and clear any cached Laravel configuration:
+
+```powershell
+docker compose up -d --force-recreate app
+docker compose exec app php artisan config:clear
+docker compose exec app php artisan migrate
+docker compose up -d --force-recreate worker
+```
+
+Compose starts Mailpit with the stack and waits for its health check before starting the app. The `worker` waits for the app's HTTP health check, ensuring Composer has finished before loading application code. Recreate the worker after `.env` changes as shown above; restart it after PHP code changes with `docker compose restart worker`. Workers retain their boot-time settings. A simple synchronous message can also be sent:
+
+```powershell
+docker compose exec app php artisan tinker --execute="Illuminate\Support\Facades\Mail::to('mailpit-preview@example.test')->send((new Illuminate\Mail\Mailable)->subject('LeggTix Mailpit preview')->html('Local SMTP preview from Laravel.'));"
+```
+
+Expect one message with that subject and body in the inbox. To verify both direct delivery and a real Redis queued message from a separate worker process:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\mailpit-smoke.ps1
+```
+
+The smoke check uses unique `.test` recipients and a dedicated queue, checks the captured content through Mailpit's API, and removes only its own messages and temporary queue data. A separate short-lived worker runs in the `app` container for that smoke queue and exits after the check. The normal Compose worker continues to consume only `emails`. See the [issue #4 verification report](docs/issue-4-validation.md) for the original Mailpit acceptance and the [transactional email guide](docs/transactional-email.md) for the expanded registration/booking behavior.
+
+With these settings, messages are captured by Mailpit and no real recipient delivery is configured. Do not configure Mailpit SMTP relay/forwarding or external SMTP credentials for this local stack. The inbox is unauthenticated and intended for local development. It uses [temporary storage](https://mailpit.axllent.org/docs/configuration/email-storage/), so stopping or recreating Mailpit discards previews; the default limit retains the newest 500 messages. Automated PHPUnit runs remain isolated and use the `array` mailer without Mailpit.
+
 ## Current scope
 
-Registration creates only `regular_user` accounts. Login issues a Laravel Sanctum token that expires after 24 hours; logout revokes the current token. The [authentication guide](docs/authentication.md) documents validation, response contracts, token handling, and rate limits.
+Registration creates only `regular_user` accounts after a required email-code check. A code expires after 10 minutes and allows five failed guesses; the resulting registration proof expires after 10 minutes and is consumed once with account/token creation. Login requires the password plus email code or a valid trusted-browser cookie before issuing a 24-hour Sanctum token. Logout revokes the current token and presented browser trust. The [authentication guide](docs/authentication.md) documents validation, response contracts, token handling, and rate limits.
 
 The [MVP schema](docs/database-design.md) is implemented with MySQL constraints, generated active uniqueness keys, restricted foreign keys, and UTC `DATETIME(6)` domain timestamps. [Event models and factories](docs/events.md) provide ownership/type relationships, typed lifecycle statuses, scheduling and fixture states for issue #6. Local demo seeders provide the review accounts, sample types/events and confirmed reservations above.
 
 [Reservation creation](docs/reservations.md) locks the current event row in MySQL, checks eligibility and duplicate/waiting state, and commits a guarded occupancy increment with a fresh attempt. Competing bookings for one event serialize through that lock; cached availability cannot claim a place. All inventory writers must follow this protocol. Direct SQL can break counter/row equality, and this milestone makes no throughput guarantee. Existing waiters block newcomer allocation until promotion is implemented. The [issue #9 validation report](docs/issue-9-validation.md) records the independent MySQL race checks and their limits.
 
-Event management, reservation cancellation/history, waitlist join/leave/promotion and notifications, password reset, and email verification remain follow-on work. Booking is the first domain endpoint.
+Event management, reservation cancellation/history, waitlist join/leave/promotion and notifications, and password reset remain follow-on work. Booking is the first domain endpoint.
+
+Registration-code, login-code, welcome and reservation-confirmation emails use reusable HTML and plain-text Blade templates populated when their jobs run. No email-body table is stored. The [registration verification guide](docs/registration-email-verification.md) describes required ownership proof; the [login verification guide](docs/login-email-verification.md) documents all-account email codes, optional Secure HttpOnly browser trust and rollout limits for existing API tokens. The [transactional email guide](docs/transactional-email.md) describes success hooks, stale-message suppression, retries and delivery limits; waitlist promotion notifications remain separate work.
 
 ## Design documentation
 

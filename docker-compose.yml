@@ -11,10 +11,34 @@ services:
     command: sh -c "composer install --no-interaction && php artisan serve --host=0.0.0.0 --port=8000"
     ports:
       - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8000/up') === false ? 1 : 0);"]
+      interval: 5s
+      timeout: 3s
+      start_period: 30s
+      retries: 20
     depends_on:
       mysql:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+    env_file:
+      - .env
+    command: php artisan queue:work redis --queue=emails --sleep=1 --tries=3 --timeout=30
+    restart: unless-stopped
+    stop_grace_period: 40s
+    depends_on:
+      app:
         condition: service_healthy
 
   mysql:
@@ -40,6 +64,18 @@ services:
       - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:v1.31.4
+    environment:
+      MP_ALLOWED_HOSTS: localhost,127.0.0.1,mailpit
+    ports:
+      - "127.0.0.1:8025:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
       interval: 5s
       timeout: 3s
       retries: 20

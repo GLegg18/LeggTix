@@ -11,14 +11,14 @@ window.addEventListener("DOMContentLoaded", function () {
         persistAuthorization: false,
         queryConfigEnabled: false,
         validatorUrl: null,
-        withCredentials: false,
+        withCredentials: true,
         requestInterceptor: function (request) {
             const target = new URL(request.url, window.location.href);
             if (target.origin !== window.location.origin ||
                 (target.pathname !== "/docs/api.json" && !target.pathname.startsWith("/api/"))) {
                 throw new Error("The API reference only sends requests to this installation.");
             }
-            request.credentials = "omit";
+            request.credentials = "same-origin";
             request.redirect = "error";
             return request;
         }

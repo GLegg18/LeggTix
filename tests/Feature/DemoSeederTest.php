@@ -22,10 +22,12 @@ use Illuminate\Testing\TestResponse;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
+use Tests\Support\CompletesLoginChallenges;
 
 class DemoSeederTest extends TestCase
 {
     use RefreshDatabase;
+    use CompletesLoginChallenges;
 
     private const NOW = '2026-10-08 12:00:00.123456';
 
@@ -177,9 +179,9 @@ class DemoSeederTest extends TestCase
         $full = Event::where('name', 'Demo: Studio Live Showcase')->sole();
         $customer = User::where('email', 'demo.user@example.test')->sole();
         $this->book($screening)->assertUnauthorized();
-        $login = $this->postJson('/api/login', [
+        $login = $this->completeLogin([
             'email' => $customer->email, 'password' => 'demo-password',
-        ])->assertOk();
+        ]);
         $token = $login->json('access_token');
         $this->app['auth']->forgetGuards();
         $this->withToken($token)->getJson('/api/user')->assertOk();
@@ -404,8 +406,8 @@ class DemoSeederTest extends TestCase
             'demo.attendee.two@example.test' => 'regular_user',
         ] as $email => $role) {
             $this->app['auth']->forgetGuards();
-            $response = $this->postJson('/api/login', ['email' => $email, 'password' => 'demo-password'])
-                ->assertOk()->assertHeader('Cache-Control', 'no-store, private')
+            $response = $this->completeLogin(['email' => $email, 'password' => 'demo-password'])
+                ->assertHeader('Cache-Control', 'no-store, private')
                 ->assertJsonPath('user.email', $email)->assertJsonPath('user.role', $role)
                 ->assertJsonPath('token_type', 'Bearer');
             $this->assertArrayNotHasKey('password', $response->json('user'));

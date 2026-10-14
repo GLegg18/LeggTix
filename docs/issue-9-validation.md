@@ -4,6 +4,10 @@ Work performed on 8 October 2026 for [concurrency-safe event reservations #9](ht
 
 The sections below retain the earlier milestone's execution history. The latest review fixes, verification and remaining acceptance work are recorded in the repository-review follow-up at the end of this report.
 
+Issue #4 subsequently adds booking-confirmation email delivery after a successful API reservation. The [transactional email guide](transactional-email.md) and [email validation report](issue-4-email-validation.md) describe that extension; it does not change the inventory protocol verified below.
+
+The historical HTTP login results below also predate required emailed login challenges. Use the [current authentication guide](authentication.md) and [login validation report](issue-4-login-validation.md) for login before repeating booking checks.
+
 ## Changes and scope
 
 The existing #5 migrations already satisfy the agreed reservation schema: restricted foreign keys, generated active-only uniqueness, history/timestamp checks, lookup indexes and bounded event counter. They are reused without adding or rewriting a migration.
