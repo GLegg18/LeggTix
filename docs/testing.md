@@ -47,6 +47,14 @@ For local demo seeder acceptance:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1 --filter=DemoSeederTest --display-warnings --fail-on-warning
 ```
 
+For public event visibility, safe response fields, cursor boundaries and matching OpenAPI contracts:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1 --filter='EventApiTest|PublicEventBoundaryTest|ApiDocumentationTest' --display-warnings --fail-on-warning
+```
+
+The [public event guide](events.md) explains the contract. The [manual plan](public-events-manual-test-plan.md) covers live reads and Swagger checks; the [issue #7 report](issue-7-validation.md) records which checks have run.
+
 For reservation business/API acceptance and the independent-process MySQL races:
 
 ```powershell

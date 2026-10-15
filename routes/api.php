@@ -1,11 +1,14 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\EventController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\RegistrationEmailVerificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', fn () => response()->json(['status' => 'ok']));
+Route::get('/events', [EventController::class, 'index']);
+Route::get('/events/{event}', [EventController::class, 'show'])->whereNumber('event');
 
 Route::post('/registration/email-verifications', [RegistrationEmailVerificationController::class, 'store'])
     ->middleware('throttle:registration-email-request');

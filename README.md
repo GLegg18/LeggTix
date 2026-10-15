@@ -1,6 +1,6 @@
 # LeggTix
 
-LeggTix is an API-first event reservation and waitlist service. The backend is a Laravel modular monolith with registration, bearer-token authentication, the five-table MVP schema, event models and factories, and concurrency-safe reservation creation. Event management, cancellation and waitlist workflows are the next milestones.
+LeggTix is an API-first event reservation and waitlist service. The backend is a Laravel modular monolith with registration, bearer-token authentication, the five-table MVP schema, public event discovery, event models and factories, and concurrency-safe reservation creation. Event management, cancellation and waitlist workflows are the next milestones.
 
 ## Stack
 
@@ -59,9 +59,9 @@ Open the [interactive API explorer](http://localhost:8000/docs/api) to browse re
 
 Allow several seconds for the schema to generate when opening the explorer.
 
-Use the login operation to obtain a token, then click **Authorize** and paste the raw `access_token`; Swagger adds the `Bearer` prefix. Authorization lasts only for the current page session. **Try it out** sends real requests to your local database. Booking needs an existing event ID; event discovery and management endpoints are still separate work.
+Browse `GET /api/events` without authentication to find upcoming published events, and use `GET /api/events/{event}` for detail. Published past events remain available by detail URL. Use the login operation to obtain a token for booking, then click **Authorize** and paste the raw `access_token`; Swagger adds the `Bearer` prefix. Authorization lasts only for the current page session. **Try it out** sends real requests to your local database. Event management endpoints remain separate work.
 
-The [authentication guide](docs/authentication.md) and [booking guide](docs/reservations.md) retain implementation notes and reproducible checks. The API returns JSON errors even when a client omits its `Accept` header.
+The [authentication guide](docs/authentication.md), [public event guide](docs/events.md) and [booking guide](docs/reservations.md) retain implementation notes and reproducible checks. The API returns JSON errors even when a client omits its `Accept` header.
 
 New accounts must [verify email ownership before registration](docs/registration-email-verification.md): request an email code, read it in Mailpit, verify the code, then submit the returned one-use registration proof with name/password. The Swagger explorer exposes each step. All later logins, including existing/demo accounts, require the [email login factor](docs/login-email-verification.md). Browsers may opt in to seven days of trust after a successful code; the password remains required.
 
@@ -116,12 +116,13 @@ Five active types (`concert`, `live-show`, `film-screening`, `workshop`, `meetup
 | Demo: Studio Live Showcase | live-show | published | 18 days ahead | 2 | 2 |
 | Demo: Independent Film Screening | film-screening | published | 25 days ahead | 30 | 0 |
 
-Schedules are UTC instants with `Europe/London` as the display timezone. A fresh dataset has three confirmed reservations: Demo User holds one place at Riverside Acoustic Night, and the two Demo Attendees fill Studio Live Showcase. Each booking uses the ordinary reservation action and its MySQL transaction/locking rules; `confirmed_count` equals the number of confirmed reservations. The past published event demonstrates the start-time cutoff. No waitlist entries or cancelled/rebooked attempts are generated: those history scenarios depend on the cancellation, join/leave and promotion workflows in [#10](https://github.com/GLegg18/LeggTix/issues/10), [#13](https://github.com/GLegg18/LeggTix/issues/13) and [#14](https://github.com/GLegg18/LeggTix/issues/14). Event management and discovery endpoints remain follow-on work.
+Schedules are UTC instants with `Europe/London` as the display timezone. A fresh dataset has three confirmed reservations: Demo User holds one place at Riverside Acoustic Night, and the two Demo Attendees fill Studio Live Showcase. Each booking uses the ordinary reservation action and its MySQL transaction/locking rules; `confirmed_count` equals the number of confirmed reservations. The past published event demonstrates the start-time cutoff and remains accessible through public detail. No waitlist entries or cancelled/rebooked attempts are generated: those history scenarios depend on the cancellation, join/leave and promotion workflows in [#10](https://github.com/GLegg18/LeggTix/issues/10), [#13](https://github.com/GLegg18/LeggTix/issues/13) and [#14](https://github.com/GLegg18/LeggTix/issues/14). Event management remains follow-on work.
 
 To find a published future event ID for a Swagger booking request:
 
 ```powershell
-docker compose exec app php artisan tinker --execute="dump(App\Models\Event::query()->where('status', 'published')->whereRaw('starts_at > UTC_TIMESTAMP(6)')->get(['id', 'name', 'capacity', 'confirmed_count'])->toArray());"
+$demoPublicEvents = Invoke-RestMethod http://localhost:8000/api/events
+$demoPublicEvents.data | Select-Object id, name, capacity, remaining_capacity
 ```
 
 A fresh demo has four matching events. Log in as Demo User and choose Independent Film Screening for a successful `201` booking; repeating it returns `409 already_reserved`. Studio Live Showcase returns `409 full` for Demo User. Riverside Acoustic Night already has Demo User's reservation, so it returns `409 already_reserved` immediately. Copy the chosen event's `id` into the reservation operation's `event` parameter and send `{}`.
