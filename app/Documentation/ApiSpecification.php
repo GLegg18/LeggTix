@@ -26,6 +26,8 @@ class ApiSpecification
             $schemas['ReservationResource']['properties'][$field] = ['type' => 'string', 'format' => 'date-time'];
         }
 
+        $schemas['EventResource'] = $this->publicEventSchema();
+
         // Static inference cannot express custom UTF-8 byte checks or prohibited-role behavior.
         unset($schemas['RegisterRequest']['properties']['role']);
         $schemas['RegisterRequest']['properties']['password'] = $this->passwordSchema() + ['minLength' => 8];
@@ -111,6 +113,55 @@ class ApiSpecification
         $health['tags'] = ['Health'];
         $health['operationId'] = 'health';
         $health['responses']['200']['description'] = 'The API is running.';
+
+        $events = &$specification['paths']['/events']['get'];
+        $events['summary'] = 'Browse upcoming published events';
+        $events['description'] = 'Public, including without a bearer token. Only published events with starts_at strictly after the current UTC time are listed, ordered by starts_at then id ascending. Full events and published events with retired types remain visible. Follow links.next/links.prev or copy the opaque meta cursor unchanged; cursors preserve schedule microseconds. Pagination is live, so edits and events reaching their start can change later pages. Only per_page and cursor query parameters are accepted; request bodies do not supply pagination. Availability is advisory until a reservation succeeds.';
+        $events['tags'] = ['Events'];
+        $events['security'] = [];
+        $events['parameters'] = [
+            ['name' => 'per_page', 'in' => 'query', 'required' => false,
+                'schema' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => 20]],
+            ['name' => 'cursor', 'in' => 'query', 'required' => false,
+                'description' => 'Opaque cursor copied unchanged from this endpoint. Invalid cursors return 422.',
+                'schema' => ['type' => 'string', 'maxLength' => 512]],
+        ];
+        unset($events['requestBody']);
+        $nullableString = ['type' => ['string', 'null']];
+        $events['responses']['200'] = $this->jsonResponse('A bounded cursor page. Empty results return an empty data array.', [
+            'type' => 'object', 'additionalProperties' => false,
+            'properties' => [
+                'data' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/EventResource']],
+                'links' => ['type' => 'object', 'additionalProperties' => false,
+                    'properties' => ['first' => ['type' => 'null'], 'last' => ['type' => 'null'],
+                        'prev' => $nullableString, 'next' => $nullableString],
+                    'required' => ['first', 'last', 'prev', 'next']],
+                'meta' => ['type' => 'object', 'additionalProperties' => false,
+                    'properties' => ['path' => ['type' => 'string'],
+                        'per_page' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 100],
+                        'next_cursor' => $nullableString, 'prev_cursor' => $nullableString],
+                    'required' => ['path', 'per_page', 'next_cursor', 'prev_cursor']],
+            ],
+            'required' => ['data', 'links', 'meta'],
+        ]);
+        $events['responses']['200']['headers']['Cache-Control'] = $this->publicEventNoStoreHeader();
+        $events['responses']['422'] = ['$ref' => '#/components/responses/ValidationException'];
+
+        $event = &$specification['paths']['/events/{event}']['get'];
+        $event['summary'] = 'View a published event';
+        $event['description'] = 'Public published-event detail, including past or full published events and retired event types. Draft, cancelled, completed and missing events all return the same generic 404. UTC schedule instants include the IANA display timezone separately. remaining_capacity reads the MySQL occupancy counter and is advisory; a past event can have remaining capacity but cannot be reserved.';
+        $event['tags'] = ['Events'];
+        $event['security'] = [];
+        $event['parameters'] = [[
+            'name' => 'event', 'in' => 'path', 'required' => true,
+            'schema' => ['type' => 'integer', 'minimum' => 1],
+        ]];
+        $event['responses']['200'] = $this->jsonResponse('Deliberate public fields for one published event.', [
+            'type' => 'object', 'additionalProperties' => false,
+            'properties' => ['data' => ['$ref' => '#/components/schemas/EventResource']], 'required' => ['data'],
+        ]);
+        $event['responses']['200']['headers']['Cache-Control'] = $this->publicEventNoStoreHeader();
+        $event['responses']['404'] = $this->messageResponse('The event is missing or is not published.');
 
         $register = &$specification['paths']['/register']['post'];
         $register['summary'] = 'Complete registration with verified email proof';
@@ -225,6 +276,36 @@ class ApiSpecification
             'type' => 'string', 'format' => 'password', 'writeOnly' => true,
             'description' => 'Plaintext password; at most 72 UTF-8 bytes and no NUL bytes. The byte limit is not a character limit.',
         ];
+    }
+
+    private function publicEventSchema(): array
+    {
+        $properties = [
+            'id' => ['type' => 'integer', 'minimum' => 1],
+            'name' => ['type' => 'string'],
+            'description' => ['type' => 'string'],
+            'venue' => ['type' => 'string'],
+            'starts_at' => ['type' => 'string', 'format' => 'date-time'],
+            'ends_at' => ['type' => ['string', 'null'], 'format' => 'date-time'],
+            'timezone' => ['type' => 'string', 'description' => 'IANA display timezone; schedule instants are UTC.'],
+            'capacity' => ['type' => 'integer', 'minimum' => 1],
+            'remaining_capacity' => ['type' => 'integer', 'minimum' => 0,
+                'description' => 'Advisory capacity minus MySQL confirmed occupancy; does not guarantee booking eligibility or allocation.'],
+            'status' => ['type' => 'string', 'const' => 'published'],
+            'event_type' => ['type' => 'object', 'additionalProperties' => false,
+                'properties' => ['id' => ['type' => 'integer', 'minimum' => 1],
+                    'slug' => ['type' => 'string'], 'name' => ['type' => 'string']],
+                'required' => ['id', 'slug', 'name']],
+        ];
+
+        return ['type' => 'object', 'additionalProperties' => false,
+            'properties' => $properties, 'required' => array_keys($properties)];
+    }
+
+    private function publicEventNoStoreHeader(): array
+    {
+        return ['description' => 'Availability and upcoming membership can change; do not cache this response.',
+            'schema' => ['type' => 'string', 'example' => 'no-store, private']];
     }
 
     private function completeTokenResponse(array &$operation, string $status, string $description): void

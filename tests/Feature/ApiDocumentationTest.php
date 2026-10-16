@@ -111,7 +111,7 @@ class ApiDocumentationTest extends TestCase
                 }
             }
         }
-        $this->assertCount(10, $operations);
+        $this->assertCount(12, $operations);
         $this->assertEqualsCanonicalizing($routes, $operations);
         $bearerNames = [];
 
@@ -121,7 +121,7 @@ class ApiDocumentationTest extends TestCase
             }
         }
         $this->assertNotEmpty($bearerNames);
-        foreach ([['/health', 'get'], ['/register', 'post'], ['/login', 'post'], ['/login/email-verifications/{challenge}/verify', 'post'], ['/registration/email-verifications', 'post'], ['/registration/email-verifications/{challenge}/verify', 'post']] as [$path, $method]) {
+        foreach ([['/health', 'get'], ['/events', 'get'], ['/events/{event}', 'get'], ['/register', 'post'], ['/login', 'post'], ['/login/email-verifications/{challenge}/verify', 'post'], ['/registration/email-verifications', 'post'], ['/registration/email-verifications/{challenge}/verify', 'post']] as [$path, $method]) {
             $this->assertSame([], $spec['paths'][$path][$method]['security'] ?? $spec['security'] ?? [], $path.' must be public.');
         }
         foreach ([['/user', 'get'], ['/logout', 'post'], ['/trusted-devices', 'delete'], ['/events/{event}/reservations', 'post']] as [$path, $method]) {
@@ -202,6 +202,42 @@ class ApiDocumentationTest extends TestCase
         $this->assertSame(1, $booking['responses']['503']['headers']['Retry-After']['schema']['const']);
         foreach (['201', '409', '503'] as $status) {
             $this->assertArrayHasKey('Cache-Control', $booking['responses'][$status]['headers']);
+        }
+    }
+
+    public function test_public_event_schema_matches_safe_fields_visibility_and_cursor_pagination(): void
+    {
+        $spec = $this->get('/docs/api.json')->assertOk()->json();
+        $resource = $this->resolve($spec['components']['schemas']['EventResource'], $spec);
+        $this->assertEqualsCanonicalizing([
+            'id', 'name', 'description', 'venue', 'starts_at', 'ends_at', 'timezone',
+            'capacity', 'remaining_capacity', 'status', 'event_type',
+        ], array_keys($resource['properties']));
+        $this->assertFalse($resource['additionalProperties']);
+        $this->assertSame('published', $resource['properties']['status']['const']);
+        $this->assertSame(['string', 'null'], $resource['properties']['ends_at']['type']);
+        $this->assertSame('date-time', $resource['properties']['starts_at']['format']);
+        $type = $resource['properties']['event_type'];
+        $this->assertEqualsCanonicalizing(['id', 'slug', 'name'], array_keys($type['properties']));
+        $this->assertFalse($type['additionalProperties']);
+
+        $list = $spec['paths']['/events']['get'];
+        $this->assertSame([], $list['security']);
+        $this->assertArrayNotHasKey('requestBody', $list);
+        $parameters = array_column($list['parameters'], null, 'name');
+        $this->assertSame(['per_page', 'cursor'], array_keys($parameters));
+        $this->assertSame(['type' => 'integer', 'minimum' => 1, 'maximum' => 100, 'default' => 20], $parameters['per_page']['schema']);
+        $page = $this->resolve($list['responses']['200']['content']['application/json']['schema'], $spec);
+        $this->assertSame(['data', 'links', 'meta'], array_keys($page['properties']));
+        $this->assertSame('#/components/schemas/EventResource', $page['properties']['data']['items']['$ref']);
+        $this->assertSame(['path', 'per_page', 'next_cursor', 'prev_cursor'], array_keys($page['properties']['meta']['properties']));
+        $this->assertArrayHasKey('422', $list['responses']);
+        $detail = $spec['paths']['/events/{event}']['get'];
+        $this->assertSame([], $detail['security']);
+        $this->assertArrayHasKey('404', $detail['responses']);
+        $this->assertStringContainsString('past', $detail['description']);
+        foreach ([$list, $detail] as $operation) {
+            $this->assertArrayHasKey('Cache-Control', $operation['responses']['200']['headers']);
         }
     }
 
