@@ -2,6 +2,8 @@
 
 New customers must prove access to their email address before creating an account. After signup, all accounts including legacy/demo users also use the separate [email login factor](login-email-verification.md), with optional seven-day trusted-browser cookies. No authenticator-app flow or booking-specific gate is added. The [MFA assessment](mfa-assessment.md) records that scope decision.
 
+The [Nuxt SPA](frontend.md) exposes this same three-step workflow under `/api/spa/*` with session cookies and CSRF protection. Its final registration response contains the user and establishes a regenerated browser session; no API token is created or returned. The bearer paths below retain their existing token contract.
+
 ## API flow
 
 Use JSON request bodies and the [local Mailpit inbox](http://localhost:8025). The [Swagger explorer](http://localhost:8000/docs/api) exposes all three public operations. Successful verification responses and all verification-endpoint errors carry `Cache-Control: no-store`; do not put codes or registration proofs in URLs, logs or shared command history.

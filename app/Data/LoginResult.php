@@ -3,6 +3,7 @@
 namespace App\Data;
 
 use Carbon\CarbonImmutable;
+use App\Models\User;
 use Laravel\Sanctum\NewAccessToken;
 
 class LoginResult
@@ -15,5 +16,6 @@ class LoginResult
         #[\SensitiveParameter] public readonly ?string $trustedDeviceCredential = null,
         public readonly ?CarbonImmutable $trustedDeviceExpiresAt = null,
         public readonly bool $forgetTrustedDevice = false,
+        public readonly ?User $user = null,
     ) {}
 }

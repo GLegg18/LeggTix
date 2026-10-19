@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <title>LeggTix LT monogram</title>
+  <rect x="6" y="6" width="52" height="52" rx="17" fill="#FF168F"/>
+  <path d="M17 18h8v28h-8V18Zm0 20h21v8H17v-8Zm16-20h17v8H33v-8Zm5 0h8v28h-8V18Z" fill="#16121B"/>
+  <path d="m28 33 5-5" stroke="#FF168F" stroke-width="3"/>
+</svg>

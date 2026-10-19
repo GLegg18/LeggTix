@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <title>LeggTix live pulse mark</title>
+  <path d="M9 20a7 7 0 0 1 7-7h32a7 7 0 0 1 7 7v7a5 5 0 0 0 0 10v7a7 7 0 0 1-7 7H16a7 7 0 0 1-7-7v-7a5 5 0 0 0 0-10v-7Z" fill="#FF168F"/>
+  <path d="M18 33h7l5-12 6 23 5-11h6" stroke="#16121B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

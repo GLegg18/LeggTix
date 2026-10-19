@@ -2,6 +2,8 @@
 
 Every new password login, including legacy/demo accounts and all roles, requires an emailed code unless the browser presents an unexpired trusted-browser credential. The password is always required. [Registration email ownership](registration-email-verification.md) still issues the first account token after its proof-backed signup; it does not require an immediate second email.
 
+The [Nuxt SPA](frontend.md) uses the same factor workflow at `/api/spa/login` and its verification route. Completion establishes a regenerated server session and returns `{ "user": ... }`, without issuing an API token. The bearer paths below keep their token response. Password-only challenge creation never signs in the browser.
+
 ## API flow
 
 Use JSON objects with the documented fields. The [Swagger explorer](http://localhost:8000/docs/api) exposes the operations and the [Mailpit inbox](http://localhost:8025) captures local codes.
@@ -26,9 +28,9 @@ Wrong JSON/media types produce `400`/`415`; missing, malformed, unknown or query
 
 The cookie contains a random selector and a separate random 256-bit validator. The server stores the selector and a SHA-256 validator hash, not the raw credential. A trusted password login rotates the validator atomically and retains the original absolute expiry: use does not extend the seven-day window. Concurrent use of the old validator cannot create a second trusted login. If the rotated response is lost, the browser must verify a new code; the old validator is deliberately unusable.
 
-The stable selector lets authenticated logout revoke the same browser family even if a concurrent login already rotated its validator. Selectors alone cannot authenticate. Logging out clears/revokes only the presented browser family and current bearer token. Forget-all affects only the authenticated account's trust and pending challenge; other users are untouched. Existing bearer tokens are not revoked by forget-all.
+The stable selector lets authenticated logout revoke the same browser family even if a concurrent login already rotated its validator. Selectors alone cannot authenticate. Logging out clears/revokes the presented browser family and the authentication used by the request (current bearer token or browser session). Forget-all affects only the authenticated account's trust and pending challenge; other users are untouched. Existing bearer tokens are not revoked by forget-all.
 
-This cookie only influences the password-login decision. It does not authenticate `/api/user`, booking, logout or forget-all: those still require the Sanctum bearer token. Swagger sends cookies only to this installation, keeps the origin/path guard and refuses redirects. Refreshing Swagger still forgets the bearer token; a remembered browser must submit its password again to obtain another token. CORS remains closed to cross-origin credentialed requests.
+This cookie only influences the password-login decision. It does not authenticate `/api/user`, booking, logout or forget-all: those require a Sanctum bearer token or an established first-party session with the SPA/CSRF boundary. Swagger sends cookies only to this installation, keeps the origin/path guard and refuses redirects. Refreshing Swagger still forgets its bearer token; a remembered browser must submit its password again to obtain another token. CORS is closed by default and grants credentials only to explicitly configured frontend origins.
 
 ## Integrity, expiry and credential changes
 
