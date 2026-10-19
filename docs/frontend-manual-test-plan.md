@@ -38,15 +38,15 @@ This plan covers the homepage, account registration with email ownership, passwo
    Start/reload the services:
 
    ```powershell
-   docker compose up -d --build
-   docker compose up -d --force-recreate app frontend
+   docker compose stop worker
+   docker compose up -d --build --force-recreate app worker frontend
    docker compose exec app php artisan config:clear
    docker compose exec app php artisan migrate
    docker compose restart worker
    docker compose ps
    ```
 
-   Expected: app, frontend, worker, MySQL, Redis and Mailpit are running; services with health checks become healthy. Wait for dependency installation with `docker compose logs -f frontend`, then press Ctrl+C when Nuxt says it is ready. Ctrl+C only stops following logs. If migration initially fails while the app is starting, wait for app health then retry the migration. Seed data is not needed for the fresh-account flow below. Optional demo accounts can be added with `docker compose exec app php artisan db:seed`; it preserves existing passwords and history.
+   Expected: the worker stops before the app can replace shared Composer dependencies, then Compose waits for a healthy app before starting the worker. App, frontend, worker, MySQL, Redis and Mailpit are running; services with health checks become healthy. Wait for dependency installation with `docker compose logs -f frontend`, then press Ctrl+C when Nuxt says it is ready. Ctrl+C only stops following logs. If migration initially fails while the app is starting, wait for app health then retry the migration. Seed data is not needed for the fresh-account flow below. Optional demo accounts can be added with `docker compose exec app php artisan db:seed`; it preserves existing passwords and history.
 
 4. Open `http://localhost:8000/up`, `http://localhost:3000` and, in a separate tab, `http://localhost:8025`. Expected: successful Laravel health page, the LeggTix homepage and the Mailpit inbox. Always use `localhost`, including Mailpit and the frontend. Mixing `127.0.0.1` and `localhost` changes cookie scope.
 

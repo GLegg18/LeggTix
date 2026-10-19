@@ -68,4 +68,3 @@ This infrastructure-only follow-up did not rerun the full PHPUnit suite, fronten
 4. Reload the account page. Expect one session restore request returning 200 and the same account.
 5. Log out. Expect one POST returning 204, the signed-out interface and a subsequent protected user request returning 401. Repeat login later with a fresh emailed code; local authentication requests should normally be a fraction of a second on the measured machine.
 6. Restart the already-configured app/worker through Compose and repeat. Expect Composer to use the shared dependency volume and the worker to start after app health. Docker Desktop Start can start these existing containers, but configuration changes still require Compose recreation.
-

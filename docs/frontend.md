@@ -40,8 +40,10 @@ SESSION_SAME_SITE=lax
 Then reload Laravel's environment and clear cached configuration:
 
 ```powershell
-docker compose up -d --build --force-recreate app frontend
+docker compose stop worker
+docker compose up -d --build --force-recreate app worker frontend
 docker compose exec app php artisan config:clear
+docker compose restart worker
 ```
 
 The frontend `NUXT_API_BASE` defaults to `http://app:8000` in Compose. This is a **server-only** environment-configured Laravel origin, not a browser URL. Nuxt forwards the browser's API and CSRF requests to Laravel, preserving the intended browser origin and response cookies. For a host-run Nuxt process, point this setting at `http://localhost:8000`; Node 24 and npm are needed only for that optional path. Never configure an untrusted API origin because the proxy forwards authentication cookies.

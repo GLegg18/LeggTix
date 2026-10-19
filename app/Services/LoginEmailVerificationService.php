@@ -11,6 +11,7 @@ use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\NewAccessToken;
 use RuntimeException;
@@ -36,14 +37,20 @@ class LoginEmailVerificationService
         $authenticated = $guard->getLastAttempted();
         // Keep this validated snapshot unchanged until the locked fingerprint check.
         // Rehashing the stale model here could overwrite a concurrent password change.
-        $fingerprint = $this->fingerprints->forUser($authenticated);
-        $result = DB::transaction(function () use ($authenticated, $fingerprint, $trustedCredential, $issueToken): LoginResult {
+        $validatedFingerprint = $this->fingerprints->forUser($authenticated);
+        $result = DB::transaction(function () use ($authenticated, $validatedFingerprint, $credentials, $trustedCredential, $issueToken): LoginResult {
             $user = User::query()->lockForUpdate()->find($authenticated->getAuthIdentifier());
 
-            if ($user === null || ! hash_equals($fingerprint, $this->fingerprints->forUser($user))) {
+            if ($user === null || ! hash_equals($validatedFingerprint, $this->fingerprints->forUser($user))) {
                 throw $this->invalidCredentials();
             }
 
+            if (config('hashing.rehash_on_login', true) && Hash::needsRehash($user->getAuthPassword())) {
+                $user->forceFill([$user->getAuthPasswordName() => Hash::make($credentials['password'])]);
+                $this->save($user);
+            }
+
+            $fingerprint = $this->fingerprints->forUser($user);
             $verification = LoginEmailVerification::query()->where('user_id', $user->id)->lockForUpdate()->first()
                 ?? new LoginEmailVerification;
             $device = $this->presentedDevice($user, $trustedCredential);

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Http\TrustedDeviceCookie;
 use App\Models\User;
+use App\Services\AuthenticationFingerprint;
 use App\Services\LoginEmailVerificationService;
 use Illuminate\Auth\Events\Validated;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Testing\TestResponse;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class SpaBoundaryAcceptanceTest extends TestCase
@@ -93,6 +95,53 @@ class SpaBoundaryAcceptanceTest extends TestCase
         $this->assertDatabaseCount('personal_access_tokens', 0);
         $this->assertGuest('web');
         $this->browser('GET', '/api/spa/user')->assertUnauthorized();
+    }
+
+    #[DataProvider('rehashPolicies')]
+    public function test_password_rehash_policy_preserves_the_spa_email_factor_and_cookie_only_contract(bool $rehash): void
+    {
+        config(['hashing.rehash_on_login' => $rehash]);
+        Hash::driver('bcrypt')->setRounds(4);
+        $user = User::factory()->create();
+        $oldHash = password_hash('password', PASSWORD_BCRYPT, ['cost' => 4]);
+        DB::table('users')->where('id', $user->id)->update(['password' => $oldHash]);
+        Hash::driver('bcrypt')->setRounds(8);
+        $fingerprints = app(AuthenticationFingerprint::class);
+        $oldFingerprint = $fingerprints->forUser($user->fresh());
+
+        $this->browser('GET', '/sanctum/csrf-cookie')->assertNoContent();
+        $challenge = $this->browser('POST', '/api/spa/login', ['email' => $user->email, 'password' => 'password'])
+            ->assertStatus(202);
+        $this->assertSame(['challenge_id', 'expires_at'], array_keys($challenge->json()));
+        $current = $user->fresh();
+        $this->assertTrue(Hash::check('password', $current->password));
+        if ($rehash) {
+            $this->assertNotSame($oldHash, $current->password);
+            $this->assertSame(8, password_get_info($current->password)['options']['cost']);
+            $this->assertFalse(Hash::needsRehash($current->password));
+            $this->assertNotSame($oldFingerprint, $fingerprints->forUser($current));
+        } else {
+            $this->assertSame($oldHash, $current->password);
+            $this->assertTrue(Hash::needsRehash($current->password));
+        }
+        $verification = DB::table('login_email_verifications')->where('user_id', $user->id)->sole();
+        $this->assertSame($fingerprints->forUser($current), $verification->credential_fingerprint);
+        $this->assertGuest('web');
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+        $this->browser('GET', '/api/spa/user')->assertUnauthorized();
+
+        $response = $this->browser('POST', '/api/spa/login/email-verifications/'.$challenge->json('challenge_id').'/verify', [
+            'code' => Crypt::decryptString($verification->encrypted_code),
+        ])->assertOk()->assertJsonPath('user.id', $user->id);
+        $this->assertSame(['user'], array_keys($response->json()));
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+        $this->assertNotNull(DB::table('login_email_verifications')->where('id', $verification->id)->value('consumed_at'));
+        $this->browser('GET', '/api/spa/user')->assertOk()->assertJsonPath('data.id', $user->id);
+    }
+
+    public static function rehashPolicies(): array
+    {
+        return [['rehash' => true], ['rehash' => false]];
     }
 
     public function test_forget_browser_is_actor_scoped_ignores_foreign_id_and_preserves_existing_tokens(): void
