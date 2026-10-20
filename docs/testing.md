@@ -25,7 +25,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\tests\Test-TestRun
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\tests\Test-TestRunner.ps1
 ```
 
-Expect 14 passing cases per shell and unchanged application configuration. Run the second command only if PowerShell 7 is installed; it is not a prerequisite for application acceptance or CI. These checks use a mock Docker command. The Dockerfile pins the PHP Redis extension to `6.3.0`; update that version deliberately when rebuilding the runtime.
+Expect 14 passing cases per shell and unchanged application configuration. Run the second command only if PowerShell 7 is installed; it is not a prerequisite for application acceptance or CI. These checks use a mock Docker command. The Dockerfile pins the PHP Redis extension to `6.3.0` and verifies the official PECL archive's SHA-256 before installing it locally. HTTPS-only curl redirects, bounded retries and timeouts avoid relying on PECL's network redirect handling. When deliberately upgrading the extension, update both the release URL/version and its independently verified archive digest. Never bypass a checksum failure.
 
 To run just the authentication tests:
 

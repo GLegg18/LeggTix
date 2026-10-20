@@ -113,3 +113,37 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1 '--filter
 ```
 
 Expected: seven passing cases and successful temporary-stack cleanup. The manual browser smoke path remains password plus current Mailpit code → correct account → reload retains session → logout → fresh account visit is signed out, as detailed in the [manual plan](frontend-manual-test-plan.md). A new browser pass, frontend build and live multiworker race were not run for this backend/tooling/documentation follow-up. The previously deferred npm advisories remain documented above; neither dependencies nor their advisory disposition changed.
+
+## GitHub Actions failure investigation — 19 October
+
+The two supplied failed runs have different causes:
+
+| Run | Actual failure | Resolution |
+| --- | --- | --- |
+| [38878581101, main](https://github.com/GLegg18/LeggTix/actions/runs/38878581101) | The guest event-resource test tried to reserve its fixed 15 October fixture on 16 October. MySQL's real clock correctly rejected it; 458 other tests passed. | Already fixed on this branch in `55f0a17`: the serialization fixture uses July of the next MySQL calendar year, preserving UTC/microsecond assertions and real booking validation. Past-event and lock-wait cutoff rejection tests remain in place. |
+| [39245761055, PR #43](https://github.com/GLegg18/LeggTix/actions/runs/39245761055) | The MySQL job failed during image construction, before PHPUnit: PECL could not download Redis 6.3.0 because of a redirect without a location. The Nuxt job passed, including build and browser cases. | The Dockerfile now downloads the same official release with curl, verifies its pinned SHA-256, and gives PECL the local archive. |
+
+The download keeps normal TLS certificate verification and restricts both the initial request and redirects to HTTPS. HTTP errors fail the build. Connection, per-attempt and retry-window limits bound retries; a checksum mismatch prevents installation. Redis remains version 6.3.0, with its existing compilation defaults and enablement. The archive is removed after installation. The [official PECL release](https://pecl.php.net/package/redis/6.3.0) and downloaded package metadata identify that version; the coordinator, developer and security reviewer independently obtained the same archive digest. `docs/testing.md` now explains updating both version and digest for a deliberate upgrade.
+
+The independent tester confirmed the older fixture failure is already addressed without weakening booking rules. The security reviewer approved the final Dockerfile change with no actionable findings. No workflow permissions, application rules, authentication behavior or dependency versions were changed.
+
+To check this build path locally, use a unique disposable Compose project rather than the development stack:
+
+```powershell
+$ciVerificationProject = 'leggtix-ci-check-' + [Guid]::NewGuid().ToString('N')
+docker compose --project-name $ciVerificationProject --file docker-compose.test.yml build --no-cache tests
+docker compose --project-name $ciVerificationProject --file docker-compose.test.yml run --rm --no-deps -T tests php --ri redis
+docker compose --project-name $ciVerificationProject --file docker-compose.test.yml run --rm -T tests php artisan test --compact --display-warnings --fail-on-warning
+docker compose --project-name $ciVerificationProject --file docker-compose.test.yml down --volumes --remove-orphans --rmi local
+```
+
+Expect the download/checksum/install step to execute, Redis support to report 6.3.0, and the complete suite to pass. Check each exit code and stop on failure; always run the last cleanup command for this exact disposable project. These commands must not target the ordinary development project. A cached image alone cannot establish that the failed external-download step works.
+
+Actual local verification for this patch:
+
+- A genuine `build --no-cache tests` passed. The runtime build layer executed in 91.5 seconds, logged `/tmp/redis-6.3.0.tgz: OK`, and installed `channel://pecl.php.net/redis-6.3.0`. Existing base-image layers were reused; the Dockerfile installation steps were rebuilt.
+- A process in that new test image confirmed the Redis extension was loaded and its version was exactly `6.3.0`.
+- The complete suite in that image passed **478 tests, 4,206 assertions**, in 78.61 seconds, exit 0, with warnings treated as failures. This includes the formerly expired event-resource fixture and the booking clock/concurrency boundaries.
+- Compose configuration and whitespace checks passed. The disposable MySQL, network and test image were removed. Build/test logs are ignored local files under `storage/logs/`; development services and data were preserved.
+
+The coordinator ran these build/runtime/test checks; the tester's source review and security review are described above. No new frontend build or browser run was required for this Docker-only repair. No hosted rerun or successful result for the forthcoming commit is claimed: push the change and check the Actions jobs for that exact commit. The original failed runs remain historical evidence. Previously deferred frontend dependency advisories remain unchanged.
