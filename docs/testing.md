@@ -12,7 +12,7 @@ The execution-policy override applies only to this PowerShell process. If your p
 
 ## Continuous integration
 
-[The Tests workflow](../.github/workflows/tests.yml) runs on pushes and pull requests, and supports manual dispatch. Its single `MySQL acceptance` job uses Bash and Docker Compose directly on a Linux runner. It builds the Dockerfile's test target and runs the complete suite against disposable MySQL, with warnings treated as failures. PHP, Composer and MySQL run inside the containers; PowerShell is only a local Windows convenience. The checkout action is pinned to a reviewed commit with read-only repository permissions and credential persistence disabled.
+[The Tests workflow](../.github/workflows/tests.yml) runs on pushes and pull requests, and supports manual dispatch. Its `MySQL acceptance` job uses Bash and Docker Compose directly on a Linux runner. It builds the Dockerfile's test target and runs the complete suite against disposable MySQL, with warnings treated as failures. PHP, Composer and MySQL run inside the containers; PowerShell is only a local Windows convenience. A separate `Nuxt acceptance` job installs locked frontend dependencies with Node 24, checks types, builds production output and runs Playwright desktop/mobile Chromium interactions against that production shell with mocked API responses. Real Laravel/email integration is covered separately by PHP tests and live manual acceptance. The checkout action is pinned to a reviewed commit with read-only repository permissions and credential persistence disabled.
 
 Each workflow run and attempt has its own Compose project. An `always()` cleanup step removes that project's containers, network, volumes and generated image even when building or testing fails. Test and cleanup failures both fail the job. The test configuration needs no host `.env` or installed dependencies and publishes no ports.
 
@@ -25,7 +25,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\tests\Test-TestRun
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\scripts\tests\Test-TestRunner.ps1
 ```
 
-Expect 14 passing cases per shell and unchanged application configuration. Run the second command only if PowerShell 7 is installed; it is not a prerequisite for application acceptance or CI. These checks use a mock Docker command. The Dockerfile pins the PHP Redis extension to `6.3.0`; update that version deliberately when rebuilding the runtime.
+Expect 14 passing cases per shell and unchanged application configuration. Run the second command only if PowerShell 7 is installed; it is not a prerequisite for application acceptance or CI. These checks use a mock Docker command. The Dockerfile pins the PHP Redis extension to `6.3.0` and verifies the official PECL archive's SHA-256 before installing it locally. HTTPS-only curl redirects, bounded retries and timeouts avoid relying on PECL's network redirect handling. When deliberately upgrading the extension, update both the release URL/version and its independently verified archive digest. Never bypass a checksum failure.
 
 To run just the authentication tests:
 

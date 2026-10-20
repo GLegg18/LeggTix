@@ -1,5 +1,10 @@
 /vendor/
 node_modules/
+/frontend/.nuxt/
+/frontend/.output/
+/frontend/coverage/
+/frontend/test-results/
+/frontend/playwright-report/
 npm-debug.log
 yarn-error.log
 

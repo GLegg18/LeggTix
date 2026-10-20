@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Jobs\SendLoginVerificationEmail;
 use App\Models\User;
+use App\Services\AuthenticationFingerprint;
 use Illuminate\Database\DatabaseTransactionsManager;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Crypt;
@@ -105,6 +106,74 @@ class LoginMfaTest extends TestCase
     public static function verificationHistory(): array
     {
         return [['previouslyVerified' => false], ['previouslyVerified' => true]];
+    }
+
+    public function test_password_cost_upgrade_preserves_the_bearer_email_factor_and_response_contract(): void
+    {
+        config(['hashing.rehash_on_login' => true]);
+        Hash::driver('bcrypt')->setRounds(4);
+        $user = User::factory()->create();
+        $oldHash = password_hash('password', PASSWORD_BCRYPT, ['cost' => 4]);
+        DB::table('users')->where('id', $user->id)->update(['password' => $oldHash]);
+        Hash::driver('bcrypt')->setRounds(8);
+
+        [, $challenge, $code] = $this->challenge($user);
+        $this->assertSame(['challenge_id', 'expires_at'], array_keys($challenge->json()));
+        $current = $user->fresh();
+        $this->assertNotSame($oldHash, $current->password);
+        $this->assertTrue(Hash::check('password', $current->password));
+        $this->assertSame(8, password_get_info($current->password)['options']['cost']);
+        $this->assertFalse(Hash::needsRehash($current->password));
+        $this->assertSame(app(AuthenticationFingerprint::class)->forUser($current), $this->row($challenge)->credential_fingerprint);
+        $this->assertGuest('web');
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+        $this->api('/api/user', [], method: 'GET')->assertUnauthorized();
+
+        $response = $this->api($this->verifyPath($challenge->json('challenge_id')), ['code' => $code])->assertOk();
+        $this->assertSame(['user', 'access_token', 'token_type', 'expires_at'], array_keys($response->json()));
+        $this->assertSame('Bearer', $response->json('token_type'));
+        $this->assertSame($user->id, $response->json('user.id'));
+        $this->assertDatabaseCount('personal_access_tokens', 1);
+        $this->api('/api/user', [], method: 'GET', token: $response->json('access_token'))
+            ->assertOk()->assertJsonPath('data.id', $user->id);
+    }
+
+    #[DataProvider('tokenWriteFailures')]
+    public function test_password_rehash_save_failure_leaves_credentials_and_authentication_side_effects_unchanged(bool $veto): void
+    {
+        config(['hashing.rehash_on_login' => true]);
+        Hash::driver('bcrypt')->setRounds(4);
+        $user = User::factory()->create();
+        $oldHash = password_hash('password', PASSWORD_BCRYPT, ['cost' => 4]);
+        DB::table('users')->where('id', $user->id)->update(['password' => $oldHash]);
+        Hash::driver('bcrypt')->setRounds(8);
+        $attempted = false;
+        Event::listen('eloquent.saving: '.User::class, static function (User $saving) use ($user, $veto, &$attempted): bool {
+            if ($saving->id === $user->id && $saving->isDirty('password')) {
+                $attempted = true;
+                if ($veto) {
+                    return false;
+                }
+                throw new RuntimeException('Injected password rehash write failure');
+            }
+
+            return true;
+        });
+
+        $this->api('/api/login', ['email' => $user->email, 'password' => 'password'])->assertStatus(500);
+        $this->assertTrue($attempted);
+        $this->assertSame($oldHash, $user->fresh()->password);
+        $this->assertGuest('web');
+        $this->assertDatabaseCount('login_email_verifications', 0);
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+        $this->assertDatabaseCount('trusted_devices', 0);
+        Queue::assertNothingPushed();
+
+        Event::forget('eloquent.saving: '.User::class);
+        [, $challenge, $code] = $this->challenge($user);
+        $this->assertFalse(Hash::needsRehash($user->fresh()->password));
+        $this->api($this->verifyPath($challenge->json('challenge_id')), ['code' => $code])->assertOk();
+        $this->assertDatabaseCount('personal_access_tokens', 1);
     }
 
     #[DataProvider('malformedCodes')]
@@ -343,6 +412,35 @@ class LoginMfaTest extends TestCase
         $this->assertDatabaseCount('personal_access_tokens', 2);
         $this->assertDatabaseCount('trusted_devices', 1);
         Queue::assertPushed(SendLoginVerificationEmail::class, 1);
+    }
+
+    public function test_password_cost_upgrade_requires_a_new_email_factor_for_previously_trusted_browser(): void
+    {
+        config(['hashing.rehash_on_login' => true]);
+        Hash::driver('bcrypt')->setRounds(4);
+        [$user, , $oldCookie] = $this->trustedLogin();
+        $oldDevice = DB::table('trusted_devices')->where('user_id', $user->id)->sole();
+        $oldHash = $user->fresh()->password;
+        Hash::driver('bcrypt')->setRounds(8);
+        $this->expireIssuanceCooldown($user);
+
+        $challenge = $this->api('/api/login', ['email' => $user->email, 'password' => 'password'], cookie: $oldCookie)
+            ->assertStatus(202)->assertJsonMissingPath('access_token');
+        $current = $user->fresh();
+        $this->assertNotSame($oldHash, $current->password);
+        $this->assertTrue(Hash::check('password', $current->password));
+        $this->assertFalse(Hash::needsRehash($current->password));
+        $this->assertNotSame($oldDevice->credential_fingerprint, app(AuthenticationFingerprint::class)->forUser($current));
+        $this->assertSame(app(AuthenticationFingerprint::class)->forUser($current), $this->row($challenge)->credential_fingerprint);
+        $this->assertDatabaseCount('personal_access_tokens', 1);
+        $this->assertGuest('web');
+        $this->assertLessThanOrEqual(time(), $this->cookie($challenge)->getExpiresTime());
+
+        $code = Crypt::decryptString($this->row($challenge)->encrypted_code);
+        $this->api($this->verifyPath($challenge->json('challenge_id')), ['code' => $code], cookie: $oldCookie)->assertOk();
+        $this->assertDatabaseCount('personal_access_tokens', 2);
+        $this->assertNotNull(DB::table('trusted_devices')->where('id', $oldDevice->id)->value('revoked_at'));
+        Queue::assertPushed(SendLoginVerificationEmail::class, 2);
     }
 
     #[DataProvider('invalidTrust')]

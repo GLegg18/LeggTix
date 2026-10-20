@@ -1,6 +1,6 @@
 # LeggTix
 
-LeggTix is an API-first event reservation and waitlist service. The backend is a Laravel modular monolith with registration, bearer-token authentication, the five-table MVP schema, public event discovery, event models and factories, and concurrency-safe reservation creation. Event management, cancellation and waitlist workflows are the next milestones.
+LeggTix is an API-first event reservation and waitlist service. The backend is a Laravel modular monolith with verified registration, bearer-token and first-party session authentication, the five-table MVP schema, public event discovery, event models and factories, and concurrency-safe reservation creation. A Nuxt customer shell provides the homepage and account flows. Event management, cancellation and waitlist workflows are the next milestones.
 
 ## Stack
 
@@ -11,8 +11,9 @@ LeggTix is an API-first event reservation and waitlist service. The backend is a
 - PHP Redis extension pinned to 6.3.0 in the Dockerfile
 - Docker Compose for the local services
 - PHPUnit for the Laravel test runner
+- Nuxt 4, Vue 3 and Tailwind CSS 4, running on Node 24 in Docker
 
-The API is the priority. A Nuxt frontend and Filament admin panel are optional follow-on work.
+Laravel owns the business rules. The lightweight Nuxt customer frontend now provides the homepage, verified registration, login and account shell. Event discovery and reservation pages are the next frontend milestone in [#21](https://github.com/GLegg18/LeggTix/issues/21). Filament administration remains optional follow-on work.
 
 ## Prerequisites
 
@@ -20,7 +21,7 @@ The API is the priority. A Nuxt frontend and Filament admin panel are optional f
 - Docker Desktop with the WSL 2 backend, Linux containers and Docker Compose v2 or newer
 - Git
 
-PHP and Composer run in the application container. Node.js and npm are not required: the API explorer's pinned JavaScript/CSS assets are committed under `resources/vendor/swagger-ui`, with their licenses and provenance. Installed PHP dependencies under the root `vendor/` and generated application files are ignored. The first build and Composer installation need network access.
+PHP and Composer run in the application container; Node.js and npm run in the Nuxt container. No host PHP, Composer, Node.js or npm installation is required. Nuxt dependencies are pinned in `frontend/package-lock.json`; the API explorer's pinned JavaScript/CSS assets are committed under `resources/vendor/swagger-ui`, with their licenses and provenance. Installed dependencies and generated application files are ignored. First builds and dependency installation need network access.
 
 ## First run
 
@@ -51,7 +52,20 @@ docker compose exec app php artisan migrate --seed
 
 Preparing the key before `up` ensures Compose loads it from `.env` when creating the app container. The initial dependency installation also makes Artisan available before the first migration.
 
+Compose keeps PHP source bind-mounted for immediate edits, while the app and queue worker share the `php-vendor` named volume for Composer dependencies. Keeping this large dependency tree on Linux storage avoids Windows bind-mount overhead on every Laravel request. Containers use that volume instead of any host `vendor` directory; an existing host directory is left untouched. The initial Composer command above fills the volume, and the app checks the locked dependencies again on startup before becoming healthy.
+
+When adopting this volume layout in an existing checkout, or applying a changed `composer.lock`, stop the worker before the app reinstalls dependencies and let Compose wait for the healthy app before restarting it:
+
+```powershell
+docker compose stop worker
+docker compose up -d --build --force-recreate app worker frontend
+```
+
+Use this Compose sequence for dependency/configuration changes; Docker Desktop's Start button starts existing containers without applying changed volume configuration or waiting for dependency health. No database reset or volume deletion is needed. Stop both `app` and `worker` before manually running Composer commands that change installed dependencies.
+
 Open [http://localhost:8000/up](http://localhost:8000/up). Laravel's health endpoint should return a successful response. Migrations create `users`, `event_types`, `events`, `reservations`, `waitlist_entries`, Sanctum's `personal_access_tokens`, Laravel's `failed_jobs`, transient registration/login verifications and trusted-browser records, alongside migration history. Seeding adds the demo accounts, types, events and reservations below.
+
+Open the customer app at [http://localhost:3000](http://localhost:3000). Compose starts Nuxt alongside Laravel, with dependencies and generated Nuxt files in named volumes. Use `localhost` consistently for this setup: `127.0.0.1` is a different browser host. See the [frontend guide](docs/frontend.md) for existing-checkout configuration, environment variables, checks, authentication and the design rationale. The [logo studio](http://localhost:3000/brand) compares three original SVG options.
 
 Redis holds pending queued work; MySQL stores failed-job records. After applying migrations, `docker compose exec app php artisan queue:failed` should report `No failed jobs found.` on a clean setup. Existing checkouts pick up new migrations with `docker compose exec app php artisan migrate`. Registration and successful API bookings queue [transactional emails](docs/transactional-email.md) for the Compose `worker`, which consumes only the `emails` queue. Mailpit captures local email at [http://localhost:8025](http://localhost:8025); the [local email preview guide](#local-email-preview) includes configuration and a queued-mail check.
 
@@ -159,7 +173,8 @@ docker compose exec app php artisan migrate --seed
 ## Troubleshooting
 
 - If Compose cannot connect to Docker, start Docker Desktop and wait for its engine to finish starting, then retry `docker compose up --build -d`.
-- If a port is already in use, stop the other service using port `8000`, `3306`, `6379`, or `8025`, or change the host port while keeping the `127.0.0.1` loopback address in the corresponding mapping in `docker-compose.yml`.
+- If a port is already in use, stop the other service using port `3000`, `8000`, `3306`, `6379`, or `8025`, or change the host port while keeping the `127.0.0.1` loopback address in the corresponding mapping in `docker-compose.yml`. Changing the frontend port also requires updating the exact CORS origin and Sanctum stateful domain in `.env` (see the frontend guide).
+- If Nuxt is stopped or not ready, use `docker compose ps --all` and `docker compose logs --timestamps --tail=100 frontend`. Nuxt startup errors are separate from Laravel's log file; the [frontend diagnostics guide](docs/frontend.md#finding-startup-errors) explains both and how to save a combined snapshot. Local Laravel logging uses `LOG_STACK=single,stderr` for file and Docker output.
 - If MySQL is unhealthy or the app reports a database connection error, check `docker compose ps` and `docker compose logs mysql`; the app waits for MySQL's health check. Confirm `.env` has the Compose defaults (`DB_HOST=mysql` and matching database credentials), then retry `docker compose up -d`.
 - For application startup errors, inspect `docker compose logs app`. The app container runs `composer install` on startup, so dependency installation errors may require network access or a later retry.
 - If you copied `.env` yourself and its `APP_KEY` is empty, run `docker compose run --rm --no-deps app php artisan key:generate`, then `docker compose up -d --force-recreate app`. Recreating the app reloads `env_file` values after `.env` changes; a plain restart retains the old container environment. Preserve an existing application key.
@@ -186,6 +201,7 @@ The test script creates a fresh, isolated MySQL container and test database, bui
 - `routes/api.php` — stateless API routes
 - `routes/console.php` — console commands
 - `database/` — migrations, factories, and seeders
+- `frontend/` — Nuxt customer shell, Tailwind styles and same-origin Laravel proxy
 
 Controllers should validate requests and coordinate small action/service classes where a business workflow warrants one. Database transactions remain the source of truth for reservation capacity; Redis is for cache and queue workloads, not ticket inventory.
 

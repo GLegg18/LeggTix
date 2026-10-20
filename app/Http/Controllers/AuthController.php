@@ -6,22 +6,25 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Requests\VerifyLoginEmailRequest;
 use App\Data\LoginResult;
+use App\Http\TrustedDeviceCookie;
 use App\Http\Resources\UserResource;
 use App\Services\AuthService;
 use App\Services\LoginEmailVerificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 use Laravel\Sanctum\NewAccessToken;
-use Symfony\Component\HttpFoundation\Cookie;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController
 {
-    public const TRUSTED_DEVICE_COOKIE = '__Host-leggtix_trusted_device';
+    public const TRUSTED_DEVICE_COOKIE = TrustedDeviceCookie::NAME;
 
     public function __construct(
         private readonly AuthService $auth,
         private readonly LoginEmailVerificationService $loginVerifications,
+        private readonly TrustedDeviceCookie $trustedCookie,
     ) {}
 
     public function register(RegisterRequest $request): JsonResponse
@@ -31,14 +34,14 @@ class AuthController
 
     public function login(LoginRequest $request): JsonResponse
     {
-        return $this->loginResponse($this->auth->login($request->validated(), $this->trustedCredential($request)));
+        return $this->loginResponse($this->auth->login($request->validated(), $this->trustedCookie->credential($request)));
     }
 
     public function verifyLogin(VerifyLoginEmailRequest $request, string $challenge): JsonResponse
     {
         return $this->loginResponse($this->loginVerifications->verify(
             $challenge, $request->validated('code'), $request->boolean('remember_device'),
-            $this->trustedCredential($request),
+            $this->trustedCookie->credential($request),
         ));
     }
 
@@ -51,18 +54,26 @@ class AuthController
 
     public function logout(Request $request): Response
     {
+        $token = $request->user()->currentAccessToken();
         $this->loginVerifications->logout(
-            $request->user(), $request->user()->currentAccessToken()->getKey(), $this->trustedCredential($request),
+            $request->user(), $token instanceof PersonalAccessToken ? $token->getKey() : null,
+            $this->trustedCookie->credential($request),
         );
 
-        return $this->clearTrustedCookie(response()->noContent());
+        if (! $token instanceof PersonalAccessToken && $request->hasSession()) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+
+        return $this->trustedCookie->forget(response()->noContent());
     }
 
     public function revokeTrustedDevices(Request $request): Response
     {
         $this->loginVerifications->revokeDevices($request->user());
 
-        return $this->clearTrustedCookie(response()->noContent());
+        return $this->trustedCookie->forget(response()->noContent());
     }
 
     private function loginResponse(LoginResult $result): JsonResponse
@@ -71,33 +82,9 @@ class AuthController
             'challenge_id' => $result->challengeId, 'expires_at' => $result->challengeExpiresAt->toISOString(),
         ], 202)->header('Cache-Control', 'no-store');
 
-        if ($result->trustedDeviceCredential !== null) {
-            $response->headers->setCookie(new Cookie(
-                self::TRUSTED_DEVICE_COOKIE, $result->trustedDeviceCredential, $result->trustedDeviceExpiresAt,
-                '/', null, true, true, false, Cookie::SAMESITE_STRICT,
-            ));
-        } elseif ($result->forgetTrustedDevice) {
-            $this->clearTrustedCookie($response);
-        }
+        $this->trustedCookie->apply($response, $result);
 
         return $response;
-    }
-
-    private function clearTrustedCookie(Response|JsonResponse $response): Response|JsonResponse
-    {
-        // __Host- cookies require these attributes even when expiring the credential.
-        $response->headers->setCookie(new Cookie(
-            self::TRUSTED_DEVICE_COOKIE, '', 1, '/', null, true, true, false, Cookie::SAMESITE_STRICT,
-        ));
-
-        return $response;
-    }
-
-    private function trustedCredential(Request $request): ?string
-    {
-        $credential = $request->cookie(self::TRUSTED_DEVICE_COOKIE);
-
-        return is_string($credential) ? $credential : null;
     }
 
     private function tokenResponse(NewAccessToken $token, int $status = 200): JsonResponse

@@ -19,10 +19,10 @@ class AuthService
         private readonly LoginEmailVerificationService $loginVerifications,
     ) {}
 
-    public function register(array $attributes): NewAccessToken
+    public function register(array $attributes, bool $issueToken = true): NewAccessToken|User
     {
         try {
-            $token = DB::transaction(function () use ($attributes): NewAccessToken {
+            $result = DB::transaction(function () use ($attributes, $issueToken): NewAccessToken|User {
                 $verifiedAt = $this->verifications->consume($attributes['email'], $attributes['registration_token'] ?? '');
                 $user = new User([
                     'name' => $attributes['name'],
@@ -36,7 +36,7 @@ class AuthService
                     throw new RuntimeException('The verified account could not be saved.');
                 }
 
-                return $this->issueToken($user);
+                return $issueToken ? $this->issueToken($user) : $user;
             });
         } catch (UniqueConstraintViolationException $exception) {
             // The unique index also protects simultaneous registrations after validation.
@@ -49,14 +49,14 @@ class AuthService
             ]);
         }
 
-        $this->emails->welcome((int) $token->accessToken->tokenable_id);
+        $this->emails->welcome((int) ($result instanceof User ? $result->id : $result->accessToken->tokenable_id));
 
-        return $token;
+        return $result;
     }
 
-    public function login(#[\SensitiveParameter] array $credentials, #[\SensitiveParameter] ?string $trustedCredential = null): LoginResult
+    public function login(#[\SensitiveParameter] array $credentials, #[\SensitiveParameter] ?string $trustedCredential = null, bool $issueToken = true): LoginResult
     {
-        return $this->loginVerifications->begin($credentials, $trustedCredential);
+        return $this->loginVerifications->begin($credentials, $trustedCredential, $issueToken);
     }
 
     private function issueToken(User $user): NewAccessToken

@@ -111,7 +111,7 @@ class ApiDocumentationTest extends TestCase
                 }
             }
         }
-        $this->assertCount(12, $operations);
+        $this->assertCount(20, $operations);
         $this->assertEqualsCanonicalizing($routes, $operations);
         $bearerNames = [];
 
@@ -128,6 +128,14 @@ class ApiDocumentationTest extends TestCase
             $security = $spec['paths'][$path][$method]['security'] ?? $spec['security'] ?? [];
             $declared = array_merge(...array_map('array_keys', $security));
             $this->assertNotEmpty(array_intersect($bearerNames, $declared), $path.' must require bearer authentication.');
+        }
+        foreach ([['/spa/user', 'get'], ['/spa/logout', 'post'], ['/spa/trusted-devices', 'delete']] as [$path, $method]) {
+            $this->assertSame([['spaSession' => []]], $spec['paths'][$path][$method]['security']);
+        }
+        foreach ([['/spa/register', '201'], ['/spa/login', '200'], ['/spa/login/email-verifications/{challenge}/verify', '200']] as [$path, $status]) {
+            $schema = $spec['paths'][$path]['post']['responses'][$status]['content']['application/json']['schema'];
+            $this->assertSame(['user'], array_keys($schema['properties']));
+            $this->assertArrayHasKey('419', $spec['paths'][$path]['post']['responses']);
         }
     }
 

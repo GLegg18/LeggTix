@@ -267,6 +267,41 @@ class ApiSpecification
             'Cache-Control' => $this->noStoreHeader(),
         ];
 
+        $specification['components']['securitySchemes']['spaSession'] = [
+            'type' => 'apiKey', 'in' => 'cookie', 'name' => config('session.cookie'),
+            'description' => 'First-party browser session established after signup or both login factors. Initialize /sanctum/csrf-cookie and send credentials with X-XSRF-TOKEN on writes.',
+        ];
+
+        foreach ([
+            '/registration/email-verifications' => 'post',
+            '/registration/email-verifications/{challenge}/verify' => 'post',
+            '/register' => 'post', '/login' => 'post', '/login/email-verifications/{challenge}/verify' => 'post',
+            '/user' => 'get', '/logout' => 'post', '/trusted-devices' => 'delete',
+        ] as $path => $method) {
+            $operation = $specification['paths'][$path][$method];
+            $operation['operationId'] = 'spa_'.($operation['operationId'] ?? $method.str_replace('/', '_', $path));
+            $operation['tags'] = ['Browser authentication'];
+            $operation['summary'] = 'Browser session: '.$operation['summary'];
+            $operation['description'] = 'Use only from the configured first-party frontend origin with credentials included. Initialize GET /sanctum/csrf-cookie before writing and send its URL-decoded XSRF-TOKEN cookie in X-XSRF-TOKEN. Signup/login completion returns user only and establishes an HttpOnly session; it never creates an API token. The email ownership/factor rules and shared rate limits match the corresponding bearer operation.';
+            $operation['security'] = in_array($path, ['/user', '/logout', '/trusted-devices'], true) ? [['spaSession' => []]] : [];
+            $operation['responses']['403'] = $this->messageResponse('The origin is not configured for browser authentication.');
+
+            if ($method !== 'get') {
+                $operation['responses']['419'] = $this->messageResponse('The session/CSRF token expired. Initialize the CSRF cookie again before retrying.');
+            }
+
+            if (in_array($path, ['/register', '/login', '/login/email-verifications/{challenge}/verify'], true)) {
+                $status = $path === '/register' ? '201' : '200';
+                $operation['responses'][$status] = $this->jsonResponse('Authentication completed and the browser session was regenerated.', [
+                    'type' => 'object', 'additionalProperties' => false,
+                    'properties' => ['user' => ['$ref' => '#/components/schemas/UserResource']], 'required' => ['user'],
+                ]);
+                $operation['responses'][$status]['headers']['Cache-Control'] = $this->noStoreHeader();
+            }
+
+            $specification['paths']['/spa'.$path][$method] = $operation;
+        }
+
         return $specification;
     }
 

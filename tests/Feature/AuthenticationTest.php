@@ -281,11 +281,12 @@ class AuthenticationTest extends TestCase
         return [['GET', '/api/user'], ['POST', '/api/logout']];
     }
 
-    public function test_session_authenticated_users_cannot_access_bearer_only_routes(): void
+    public function test_sanctum_can_authenticate_first_party_web_sessions(): void
     {
-        $this->actingAs(User::factory()->create(), 'web');
-        $this->get('/api/user')->assertUnauthorized()->assertExactJson(['message' => 'Unauthenticated.']);
-        $this->post('/api/logout')->assertUnauthorized();
+        $user = User::factory()->create();
+        $this->actingAs($user, 'web');
+        $this->get('/api/user')->assertOk()->assertJsonPath('data.id', $user->id);
+        $this->post('/api/logout')->assertNoContent();
     }
 
     public function test_expired_and_deleted_tokens_fail_at_the_expiry_boundary(): void

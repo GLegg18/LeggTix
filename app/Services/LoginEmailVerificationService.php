@@ -11,6 +11,7 @@ use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\NewAccessToken;
 use RuntimeException;
@@ -24,23 +25,32 @@ class LoginEmailVerificationService
         private readonly TransactionalEmailDispatcher $emails,
     ) {}
 
-    public function begin(#[\SensitiveParameter] array $credentials, #[\SensitiveParameter] ?string $trustedCredential = null): LoginResult
+    public function begin(#[\SensitiveParameter] array $credentials, #[\SensitiveParameter] ?string $trustedCredential = null, bool $issueToken = true): LoginResult
     {
         $guard = Auth::guard('web');
 
-        if (! $guard->once($credentials)) {
+        // Validate the password without authenticating the guard before the email factor.
+        if (! $guard->validate($credentials)) {
             throw $this->invalidCredentials();
         }
 
-        $authenticated = $guard->user();
-        $fingerprint = $this->fingerprints->forUser($authenticated);
-        $result = DB::transaction(function () use ($authenticated, $fingerprint, $trustedCredential): LoginResult {
+        $authenticated = $guard->getLastAttempted();
+        // Keep this validated snapshot unchanged until the locked fingerprint check.
+        // Rehashing the stale model here could overwrite a concurrent password change.
+        $validatedFingerprint = $this->fingerprints->forUser($authenticated);
+        $result = DB::transaction(function () use ($authenticated, $validatedFingerprint, $credentials, $trustedCredential, $issueToken): LoginResult {
             $user = User::query()->lockForUpdate()->find($authenticated->getAuthIdentifier());
 
-            if ($user === null || ! hash_equals($fingerprint, $this->fingerprints->forUser($user))) {
+            if ($user === null || ! hash_equals($validatedFingerprint, $this->fingerprints->forUser($user))) {
                 throw $this->invalidCredentials();
             }
 
+            if (config('hashing.rehash_on_login', true) && Hash::needsRehash($user->getAuthPassword())) {
+                $user->forceFill([$user->getAuthPasswordName() => Hash::make($credentials['password'])]);
+                $this->save($user);
+            }
+
+            $fingerprint = $this->fingerprints->forUser($user);
             $verification = LoginEmailVerification::query()->where('user_id', $user->id)->lockForUpdate()->first()
                 ?? new LoginEmailVerification;
             $device = $this->presentedDevice($user, $trustedCredential);
@@ -54,9 +64,10 @@ class LoginEmailVerificationService
                 $this->save($device);
 
                 return new LoginResult(
-                    token: $this->issueToken($user),
+                    token: $issueToken ? $this->issueToken($user) : null,
                     trustedDeviceCredential: $device->selector.'.'.$validator,
                     trustedDeviceExpiresAt: $device->expires_at,
+                    user: $user,
                 );
             }
 
@@ -94,9 +105,10 @@ class LoginEmailVerificationService
         #[\SensitiveParameter] string $code,
         bool $rememberDevice = false,
         #[\SensitiveParameter] ?string $trustedCredential = null,
+        bool $issueToken = true,
     ): LoginResult {
         $userId = LoginEmailVerification::query()->where('challenge_id', $challengeId)->value('user_id');
-        $result = DB::transaction(function () use ($userId, $challengeId, $code, $rememberDevice, $trustedCredential): ?LoginResult {
+        $result = DB::transaction(function () use ($userId, $challengeId, $code, $rememberDevice, $trustedCredential, $issueToken): ?LoginResult {
             $user = $userId === null ? null : User::query()->lockForUpdate()->find($userId);
             $verification = $user === null ? null : LoginEmailVerification::query()->where('user_id', $userId)->lockForUpdate()->first();
             $presentedDevice = $user === null ? null : $this->presentedDevice($user, $trustedCredential);
@@ -150,10 +162,11 @@ class LoginEmailVerificationService
             }
 
             return new LoginResult(
-                token: $this->issueToken($user),
+                token: $issueToken ? $this->issueToken($user) : null,
                 trustedDeviceCredential: $device === null ? null : $device->selector.'.'.$validator,
                 trustedDeviceExpiresAt: $device?->expires_at,
                 forgetTrustedDevice: ! $rememberDevice,
+                user: $user,
             );
         }, attempts: 3);
 
@@ -164,13 +177,15 @@ class LoginEmailVerificationService
         return $result;
     }
 
-    public function logout(User $actor, int $tokenId, #[\SensitiveParameter] ?string $trustedCredential): void
+    public function logout(User $actor, ?int $tokenId, #[\SensitiveParameter] ?string $trustedCredential): void
     {
         DB::transaction(function () use ($actor, $tokenId, $trustedCredential): void {
             $user = User::query()->lockForUpdate()->findOrFail($actor->id);
             $device = $this->presentedDevice($user, $trustedCredential);
             $this->revokeDevice($device, $this->databaseTime());
-            $user->tokens()->whereKey($tokenId)->delete();
+            if ($tokenId !== null) {
+                $user->tokens()->whereKey($tokenId)->delete();
+            }
         }, attempts: 3);
     }
 

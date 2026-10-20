@@ -44,18 +44,21 @@ class EventApiTest extends TestCase
 
     public function test_guest_detail_and_list_share_an_explicit_public_resource_and_retired_type_remains_visible(): void
     {
+        // Booking uses real database time; the serialization fixture must remain
+        // bookable even after the separate frozen PHP calendar date has passed.
+        $futureYear = (int) DB::scalar('SELECT YEAR(UTC_TIMESTAMP())') + 1;
         $type = EventType::factory()->inactive()->create(['slug' => 'live-show', 'name' => 'Live show']);
         $event = Event::factory()->for($type, 'eventType')->published()->create([
             'name' => 'Public concert', 'description' => 'Event information', 'venue' => 'Town Hall',
-            'starts_at' => '2026-10-15T19:30:00.123456+01:00',
-            'ends_at' => '2026-10-15T21:30:00.654321+01:00',
+            'starts_at' => $futureYear.'-07-15T19:30:00.123456+01:00',
+            'ends_at' => $futureYear.'-07-15T21:30:00.654321+01:00',
             'timezone' => 'Europe/London', 'capacity' => 2,
         ]);
         app(ReserveEventAction::class)->execute(User::factory()->create(), $event->id);
         $expected = [
             'id' => $event->id, 'name' => 'Public concert', 'description' => 'Event information',
-            'venue' => 'Town Hall', 'starts_at' => '2026-10-15T18:30:00.123456Z',
-            'ends_at' => '2026-10-15T20:30:00.654321Z', 'timezone' => 'Europe/London',
+            'venue' => 'Town Hall', 'starts_at' => $futureYear.'-07-15T18:30:00.123456Z',
+            'ends_at' => $futureYear.'-07-15T20:30:00.654321Z', 'timezone' => 'Europe/London',
             'capacity' => 2, 'remaining_capacity' => 1, 'status' => 'published',
             'event_type' => ['id' => $type->id, 'slug' => 'live-show', 'name' => 'Live show'],
         ];
