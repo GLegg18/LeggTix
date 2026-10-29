@@ -2,6 +2,8 @@
 
 [Issue #6](https://github.com/GLegg18/LeggTix/issues/6) added the Eloquent model layer and test fixtures on the physical schema delivered in #5. [Issue #7](https://github.com/GLegg18/LeggTix/issues/7) adds public event discovery. The [database design](database-design.md) and [ER diagram](diagrams/leggtix-database-er.svg) remain the field, constraint and workflow contract.
 
+[Issue #8 event management](event-management.md) now implements owner/admin creation, editing, publication, cancellation/completion and private event/attendee/waitlist inspection, with a [Nuxt workspace](event-management-ui.md). Public reads below retain their existing fields and published-only boundary. The [manual plan](event-management-manual-test-plan.md) and [validation report](issue-8-validation.md) cover the management milestone separately.
+
 ## Public API
 
 Both reads work without authentication and return JSON, including errors when `Accept` is omitted. The [local Swagger explorer](http://localhost:8000/docs/api) and [OpenAPI JSON](http://localhost:8000/docs/api.json) describe the current contract.
@@ -24,7 +26,7 @@ Owner/account data, attendee and waitlist records, raw `confirmed_count`, catalo
 
 ### Cursor pagination
 
-The list accepts only `per_page` (integer from 1 to 100, default 20) and `cursor` query parameters. Unsupported query parameters or invalid pagination return `422` with the usual validation errors; pagination values in a GET request body are ignored. Filtering, search and event writes are separate work.
+The list accepts only `per_page` (integer from 1 to 100, default 20) and `cursor` query parameters. Unsupported query parameters or invalid pagination return `422` with the usual validation errors; pagination values in a GET request body are ignored. Filtering/search remain separate work; writes use the private [management API](event-management.md).
 
 Events are ordered by `starts_at ASC, id ASC`, supported by the existing `(status, starts_at, id)` index. Schedule microseconds and equal-time ID ties are preserved in both pagination directions. Follow `links.next` or `links.prev` unchanged. Alternatively copy `meta.next_cursor` or `meta.prev_cursor` to `cursor` and retain `per_page`. Cursors are opaque and are validated for their expected types and structure; they are not authorization credentials.
 
@@ -54,9 +56,9 @@ The existing migrations enforce positive unsigned capacity, a counter no larger 
 
 Event schedule instants are stored in UTC with microsecond precision. `timezone` identifies the IANA zone for display, such as `Europe/London`; it does not change the meaning of a stored UTC instant. Supply UTC values or explicit timezone offsets when assigning schedule instants. A future API accepting wall-clock local times must validate daylight-saving gaps and ambiguous times before assignment.
 
-Capacity assignment requires a native PHP integer from `1` through `4294967295`; numeric strings, floats and booleans are rejected. A future request workflow must validate and explicitly normalize its input before assignment. This prevents silent truncation through an integer cast. The database check is retained for writes that bypass Eloquent. The event's timezone must be a valid IANA identifier.
+Capacity assignment requires a native PHP integer from `1` through `4294967295`; numeric strings, floats and booleans are rejected. Management requests validate native JSON integers before assignment. This prevents silent truncation through an integer cast. The database check is retained for writes that bypass Eloquent. The event's timezone must be a valid IANA identifier.
 
-Ownership, identity, lifecycle status, confirmed occupancy and timestamps are protected from general mass assignment. Trusted code must assign ownership through the relationship and manage lifecycle/inventory fields explicitly. Factories use Laravel's trusted fixture mechanism. This field protection is not an authorization policy: future event endpoints must still validate allowed request fields and authorize the actor.
+Ownership, identity, lifecycle status, confirmed occupancy and timestamps are protected from general mass assignment. Trusted code must assign ownership through the relationship and manage lifecycle/inventory fields explicitly. Factories use Laravel's trusted fixture mechanism. This field protection is not an authorization policy: management endpoints separately validate allowed request fields and enforce `EventPolicy` against the actor/current event.
 
 ## Read helpers and lifecycle boundaries
 
@@ -64,7 +66,7 @@ Ownership, identity, lifecycle status, confirmed occupancy and timestamps are pr
 
 `isBookable()` identifies a published event whose start is strictly in the future. `Event::upcoming()` selects the same published/future class of events. These are eligibility read helpers; they do not allocate places, check or reserve remaining capacity, or authorize a customer. Retirement of a type does not invalidate an already published event.
 
-The design permits draft to published/cancelled, and published to cancelled/completed. Publication requires a future start, completion requires a past start, and terminal events do not reopen. Mutating these states belongs to the later event management actions: they must lock and re-read the event, authorize the actor, verify an active type when publishing or assigning it, and update related records as specified in the design. The model read helpers do not perform those transactions. Booking actions must recheck eligibility under the inventory lock immediately before allocation.
+The design permits draft to published/cancelled, and published to cancelled/completed. Publication requires a future start, completion requires a past start, and terminal events do not reopen. `ManageEventAction` implements these transitions under the event lock, authorises the current event, locks/verifies an active type when publishing or assigning it, and closes related attempts as specified in the [management guide](event-management.md). Metadata remains editable on terminal events; their schedule/type/capacity/status cannot change. The model read helpers do not perform these transactions. Booking and promotion recheck eligibility under the inventory lock immediately before allocation.
 
 ## Factory fixtures
 

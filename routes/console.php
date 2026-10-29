@@ -39,3 +39,14 @@ Artisan::command('login-email:prune', function (): void {
 })->purpose('Remove expired login challenges and expired or revoked trusted browsers');
 
 Schedule::command('login-email:prune')->hourly();
+
+Artisan::command('waitlist:promote {event : Event ID whose spare places should be filled}', function (): void {
+    $id = filter_var($this->argument('event'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    if ($id === false) {
+        $this->error('Supply a positive integer event ID.');
+
+        return;
+    }
+    $result = app(\App\Actions\PromoteWaitlistAction::class)->execute($id);
+    $this->info('Promoted '.count($result['promotions']).' waiters.'.($result['more'] ? ' A continuation was queued.' : ''));
+})->purpose('Resume a bounded FIFO waitlist promotion batch after an interrupted capacity increase');

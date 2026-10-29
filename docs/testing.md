@@ -63,6 +63,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1 --filter=
 
 The race class uses committed fixtures and separate PHP processes with independent MySQL connections. It coordinates contenders around an event lock and checks the final committed counter and confirmed rows. Barrier waits are bounded and worker errors fail the case. These are correctness checks for booking, not a load benchmark or the complete cancellation/waitlist race suite.
 
+For owner/admin event management, strict input/private responses, bounded capacity-increase promotion and four independent MySQL races against booking:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test.ps1 --filter='EventManagement|ApiDocumentationTest' --display-warnings --fail-on-warning
+```
+
+The [management guide](event-management.md) explains the contract; the [manual plan](event-management-manual-test-plan.md) covers the Nuxt workspace and live API, and the [issue #8 report](issue-8-validation.md) records execution. Frontend `npm test` also covers organiser desktop/mobile interactions against the production build with mocked API responses. The real Laravel/Mailpit walkthrough is separate evidence.
+
 The concurrency suite also exercises real MySQL lock-timeout retry exhaustion through the Laravel HTTP kernel. It sets a one-second timeout only on its isolated worker session, verifies the three-attempt busy response and no allocation, then confirms booking after releasing the lock. It does not change normal database timeout settings.
 
 To verify the running local app, PHP request parsing and Redis throttling:
@@ -126,4 +134,4 @@ The [issue #5 verification report](issue-5-validation.md) records completed auto
 
 The [issue #6 verification report](issue-6-validation.md) records event model/factory verification and the developer, tester and security review outcomes. The [event guide](events.md) explains the model contracts and relevant manual checks.
 
-The runner exercises the local demo seeders in their acceptance cases; normal tests create their own fixtures. Reservation tests cover booking and its MySQL races. Cancellation, waitlist/promotion races, load benchmarks and automated browser regression tests remain downstream work; the [database design](database-design.md) records the full verification contract. The [issue #9 report](issue-9-validation.md) records the live API and exploratory Swagger browser checks actually performed.
+The runner exercises the local demo seeders in their acceptance cases; normal tests create their own fixtures. Reservation tests cover booking and its MySQL races; management tests add event cancellation, edits against bookings and bounded capacity-increase promotion. Nuxt has desktop/mobile browser regressions. Customer cancellation/join/leave and their complete promotion races, plus load benchmarks, remain downstream work; the [database design](database-design.md) records the full verification contract. The [issue #9 report](issue-9-validation.md) and [issue #8 report](issue-8-validation.md) record checks actually performed for their respective milestones.

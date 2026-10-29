@@ -31,7 +31,7 @@ async function csrf() {
 
 export async function api<T>(
   path: string,
-  options: { method?: "GET" | "POST" | "DELETE"; body?: unknown } = {},
+  options: { method?: "GET" | "POST" | "PATCH" | "DELETE"; body?: unknown } = {},
   retry = true,
 ): Promise<T> {
   const method = options.method ?? "GET";

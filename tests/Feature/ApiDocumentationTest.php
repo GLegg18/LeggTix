@@ -111,7 +111,7 @@ class ApiDocumentationTest extends TestCase
                 }
             }
         }
-        $this->assertCount(20, $operations);
+        $this->assertCount(36, $operations);
         $this->assertEqualsCanonicalizing($routes, $operations);
         $bearerNames = [];
 
@@ -246,6 +246,33 @@ class ApiDocumentationTest extends TestCase
         $this->assertStringContainsString('past', $detail['description']);
         foreach ([$list, $detail] as $operation) {
             $this->assertArrayHasKey('Cache-Control', $operation['responses']['200']['headers']);
+        }
+    }
+
+    public function test_management_contract_documents_private_fields_strict_writes_and_browser_security(): void
+    {
+        $spec = $this->get('/docs/api.json')->assertOk()->json();
+        $create = $spec['paths']['/manage/events']['post']['requestBody']['content']['application/json']['schema'];
+        $patch = $spec['paths']['/manage/events/{event}']['patch']['requestBody']['content']['application/json']['schema'];
+        $this->assertFalse($create['additionalProperties']);
+        $this->assertContains('capacity', $create['required']);
+        $this->assertArrayNotHasKey('required', $patch);
+        $this->assertSame(['draft', 'published'], $create['properties']['status']['enum']);
+        foreach (['owner_id', 'confirmed_count', 'id', 'created_at'] as $field) {
+            $this->assertArrayNotHasKey($field, $create['properties']);
+        }
+        foreach (['ManagedReservationResource', 'ManagedWaitlistResource'] as $resource) {
+            $this->assertSame(['id', 'name'], array_keys($spec['components']['schemas'][$resource]['properties']['user']['properties']));
+            $this->assertFalse($spec['components']['schemas'][$resource]['additionalProperties']);
+        }
+        $this->assertContains('confirmed_count', $spec['components']['schemas']['ManagedEventResource']['required']);
+        $this->assertSame('published', $spec['components']['schemas']['EventResource']['properties']['status']['const']);
+        foreach (['/events', '/events/{event}', '/events/{event}/reservations', '/events/{event}/waitlist', '/event-types'] as $path) {
+            $this->assertSame([['spaSession' => []]], $spec['paths']['/spa/manage'.$path]['get']['security']);
+        }
+        foreach (['patch', 'delete'] as $method) {
+            $this->assertArrayHasKey('419', $spec['paths']['/spa/manage/events/{event}'][$method]['responses']);
+            $this->assertArrayHasKey('503', $spec['paths']['/manage/events/{event}'][$method]['responses']);
         }
     }
 

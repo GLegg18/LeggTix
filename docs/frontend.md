@@ -1,6 +1,6 @@
 # Nuxt customer frontend
 
-[Issue #20](https://github.com/GLegg18/LeggTix/issues/20) adds a lightweight Nuxt customer shell. Laravel remains the only owner of account permissions, verification rules and reservation capacity. This milestone includes the homepage, verified signup, login, account summary, logout, theme controls and an SVG logo studio. Event list/detail, reservation history, booking/cancellation and waitlist interactions belong to [#21](https://github.com/GLegg18/LeggTix/issues/21). Password recovery requires a separate backend workflow.
+[Issue #20](https://github.com/GLegg18/LeggTix/issues/20) adds a lightweight Nuxt customer shell. Laravel remains the only owner of account permissions, verification rules and reservation capacity. It includes the homepage, verified signup, login, account summary, logout, theme controls and an SVG logo studio. [Issue #8](https://github.com/GLegg18/LeggTix/issues/8) extends it with an [organiser workspace](event-management-ui.md) for event management and private reservation/waitlist inspection. Customer event list/detail, personal reservation history, booking/cancellation and waitlist interactions remain [#21](https://github.com/GLegg18/LeggTix/issues/21). Password recovery requires a separate backend workflow.
 
 ## Local run
 

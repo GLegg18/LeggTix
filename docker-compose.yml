@@ -69,7 +69,7 @@ services:
       - php-vendor:/var/www/html/vendor
     env_file:
       - .env
-    command: php artisan queue:work redis --queue=emails --sleep=1 --tries=3 --timeout=30
+    command: php artisan queue:work redis --queue=inventory,emails --sleep=1 --tries=3 --timeout=30
     restart: unless-stopped
     stop_grace_period: 40s
     depends_on:
