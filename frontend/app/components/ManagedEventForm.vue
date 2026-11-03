@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { api, ApiError } from "~/utils/api";
 import type { CursorPage, EventTypeChoice, ManagedEvent } from "~/utils/management";
+import { resolveLocalDateTime, scheduleTimeZones, scheduleValue, type ScheduleValue, type TimeOccurrence } from "~/utils/eventDateTime";
 const props = defineProps<{ event?: ManagedEvent; disabled?: boolean }>();
 const emit = defineEmits<{ saved: [event: ManagedEvent]; busy: [value: boolean] }>();
 const { identity, restore } = useManagement();
@@ -10,6 +11,9 @@ const loadingTypes = ref(true);
 const saved = ref(false);
 const { message, errors, clear, fail } = useFormErrors();
 const form = reactive({ name: props.event?.name ?? "", description: props.event?.description ?? "", venue: props.event?.venue ?? "", starts_at: props.event?.starts_at ?? "", ends_at: props.event?.ends_at ?? "", timezone: props.event?.timezone ?? "Europe/London", capacity: props.event?.capacity ?? 1, event_type_id: props.event?.event_type.id ?? 0 });
+const startSchedule = reactive(scheduleValue(form.starts_at, form.timezone));
+const endSchedule = reactive(scheduleValue(form.ends_at, form.timezone));
+const timeZones = computed(() => scheduleTimeZones(form.timezone));
 const terminal = computed(() => !!props.event && ["cancelled", "completed"].includes(props.event.status));
 const frozen = computed(() => !!props.event?.has_history || terminal.value);
 const original = { ...form };
@@ -38,12 +42,43 @@ async function loadTypes() {
   } finally { if (active) loadingTypes.value = false; }
 }
 onMounted(loadTypes);
+function updateSchedule(schedule: ScheduleValue, field: "starts_at" | "ends_at", value: string) {
+  schedule.local = value;
+  schedule.occurrence = "";
+  delete errors.value[field];
+}
+function updateOccurrence(schedule: ScheduleValue, field: "starts_at" | "ends_at", value: TimeOccurrence | "") {
+  schedule.occurrence = value;
+  delete errors.value[field];
+}
+function changeTimeZone(event: Event) {
+  const nextZone = (event.target as HTMLSelectElement).value;
+  for (const schedule of [startSchedule, endSchedule]) {
+    const resolved = resolveLocalDateTime(schedule.local, form.timezone, schedule.occurrence, schedule.preservedInstant);
+    if (resolved.instant) Object.assign(schedule, scheduleValue(resolved.instant, nextZone));
+    else schedule.occurrence = "";
+  }
+  form.timezone = nextZone;
+  delete errors.value.timezone;
+  delete errors.value.starts_at;
+  delete errors.value.ends_at;
+}
 async function submit() {
   if (pending.value || props.disabled) return;
   emit("busy", true);
   pending.value = true; saved.value = false; clear();
   try {
-    const values: Record<string, unknown> = { ...form, capacity: Number(form.capacity), event_type_id: Number(form.event_type_id), ends_at: form.ends_at || null };
+    const start: ReturnType<typeof resolveLocalDateTime> = frozen.value ? { instant: props.event!.starts_at } : resolveLocalDateTime(startSchedule.local, form.timezone, startSchedule.occurrence, startSchedule.preservedInstant);
+    const end: ReturnType<typeof resolveLocalDateTime> = frozen.value ? { instant: props.event!.ends_at } : resolveLocalDateTime(endSchedule.local, form.timezone, endSchedule.occurrence, endSchedule.preservedInstant);
+    if (start.error || !start.instant) errors.value.starts_at = [start.error || "Choose a start date and time."];
+    if (end.error) errors.value.ends_at = [end.error];
+    if (Object.keys(errors.value).length) {
+      message.value = "Check the event dates and times.";
+      await nextTick();
+      document.querySelector<HTMLElement>("[data-error-summary]")?.focus();
+      return;
+    }
+    const values: Record<string, unknown> = { ...form, starts_at: start.instant, ends_at: end.instant, capacity: Number(form.capacity), event_type_id: Number(form.event_type_id) };
     if (props.event) {
       for (const key of Object.keys(values)) {
         const before = key === "ends_at" ? original.ends_at || null : original[key as keyof typeof original];
@@ -64,9 +99,6 @@ async function submit() {
 const fields = [
   { name: "name", label: "Event name", max: 255 },
   { name: "venue", label: "Venue", max: 255 },
-  { name: "starts_at", label: "Start instant (UTC or offset)", hint: "For example: 2027-06-18T18:30:00+01:00", freeze: true },
-  { name: "ends_at", label: "End instant (optional)", hint: "Use Z or an explicit offset; leave empty for no end time.", freeze: true },
-  { name: "timezone", label: "Display timezone", hint: "IANA identifier, for example Europe/London. This does not change the instant.", freeze: true },
 ] as const;
 </script>
 <template>
@@ -78,9 +110,26 @@ const fields = [
     <p v-if="frozen && !terminal" class="notice">This event has reservation or waitlist history. Its schedule and type are fixed; rescheduling needs a separate workflow.</p>
     <div v-for="field in fields" :key="field.name" class="field">
       <label :for="`event-${field.name}`">{{ field.label }}</label>
-      <input :id="`event-${field.name}`" v-model="form[field.name]" type="text" :maxlength="'max' in field ? field.max : undefined" :required="field.name !== 'ends_at'" :disabled="pending || (frozen && 'freeze' in field)" :aria-invalid="!!errors[field.name]" :aria-describedby="`event-${field.name}-hint`" />
-      <p :id="`event-${field.name}-hint`" :class="errors[field.name] ? 'field-error' : 'field-hint'">{{ errors[field.name]?.[0] || ('hint' in field ? field.hint : '') }}</p>
+      <input :id="`event-${field.name}`" v-model="form[field.name]" type="text" :maxlength="field.max" required :disabled="pending" :aria-invalid="!!errors[field.name]" :aria-describedby="errors[field.name] ? `event-${field.name}-hint` : undefined" />
+      <p v-if="errors[field.name]" :id="`event-${field.name}-hint`" class="field-error">{{ errors[field.name]?.[0] }}</p>
     </div>
+    <fieldset class="event-schedule form-stack" :disabled="pending || frozen" aria-describedby="event-schedule-hint">
+      <legend>Event schedule</legend>
+      <p id="event-schedule-hint" class="field-hint">Choose dates and times in the event's time zone.</p>
+      <div class="management-form-grid">
+        <EventDateTimeInput id="event-starts_at" label="Start date and time" :model-value="startSchedule.local" :occurrence="startSchedule.occurrence" :timezone="form.timezone" :error="errors.starts_at?.[0]" :disabled="pending || frozen"
+          @update:model-value="updateSchedule(startSchedule, 'starts_at', $event)" @update:occurrence="updateOccurrence(startSchedule, 'starts_at', $event)" />
+        <EventDateTimeInput id="event-ends_at" label="End date and time (optional)" :model-value="endSchedule.local" :occurrence="endSchedule.occurrence" :timezone="form.timezone" :error="errors.ends_at?.[0]" :disabled="pending || frozen" optional
+          @update:model-value="updateSchedule(endSchedule, 'ends_at', $event)" @update:occurrence="updateOccurrence(endSchedule, 'ends_at', $event)" />
+      </div>
+      <div class="field">
+        <label for="event-timezone">Time zone</label>
+        <select id="event-timezone" :value="form.timezone" :disabled="pending || frozen" :aria-invalid="!!errors.timezone" aria-describedby="event-timezone-hint" @change="changeTimeZone">
+          <option v-for="zone in timeZones" :key="zone.value" :value="zone.value">{{ zone.label }}</option>
+        </select>
+        <p id="event-timezone-hint" :class="errors.timezone ? 'field-error' : 'field-hint'">{{ errors.timezone?.[0] || 'Changing the time zone keeps selected times at the same moment and displays them in the new zone. Unfinished entries use the new zone.' }}</p>
+      </div>
+    </fieldset>
     <div class="field">
       <label for="event-description">Description</label>
       <textarea id="event-description" v-model="form.description" rows="5" required :disabled="pending" :aria-invalid="!!errors.description" aria-describedby="event-description-error" />

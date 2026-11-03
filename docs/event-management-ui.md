@@ -8,14 +8,16 @@ Open [Manage events](http://localhost:3000/manage/events) after signing in as an
 
 - **Manage events** links in the header and account page for organisers/admins. Organisers see their own events; admins see all events. Guests see a sign-in prompt, ordinary customers see an access-denied explanation, and API failures offer retry.
 - `/manage/events` lists bounded pages with name, schedule, status and confirmed occupancy/capacity. Private detail remains available for drafts, cancelled and completed events.
-- `/manage/events/new` creates drafts using active type choices, name, description, venue, capacity, explicit schedule instants and an IANA display timezone. Publication follows review of the draft.
+- `/manage/events/new` creates drafts using active type choices, name, description, venue, capacity, native date/time pickers and an explicit event time zone. Both choosing from the browser picker and typing into its date/time segments are supported. Publication follows review of the draft.
 - `/manage/events/{id}` edits listing information and capacity. History freezes schedule/type; closed events permit name/description/venue corrections only. Only changed fields are sent, so an unchanged retired type does not block ordinary edits. Laravel returns the final validation outcome because bookings/state can change while a form is open.
 - Publish drafts, mark past published events completed, and cancel eligible events. Cancellation confirmation names the event and describes the effect on reservations/waiters. Save and lifecycle controls coordinate their pending states to prevent overlapping UI submissions.
 - Read-only paginated reservation and waitlist history shows deliberate account IDs/names, attempt references, status and timestamps. No private account email/credential fields are requested or rendered.
 
 The workspace reuses the light/dark theme, form errors, loading states and SPA cookie/CSRF client. Private records stay in component memory and clear when account/session state changes. Request revisions discard stale responses. Narrow screens use a stacked layout, labelled form controls, keyboard-accessible actions and announced errors.
 
-Schedule entry uses explicit UTC/offset values. The browser does not silently reinterpret a wall-clock time in its own timezone. A later local-time picker needs deliberate daylight-saving gap/ambiguity handling before sending an unambiguous instant to Laravel.
+Schedule entry uses **Start date and time**, **End date and time (optional)** and **Time zone**. Clicking anywhere inside either date/time field opens the native picker where supported; keyboard focus keeps typed entry available. The calendar icon remains usable. Organisers enter the event's local date/time rather than an ISO timestamp. The zone defaults to London and is explicitly selectable. Resolved values are converted to unambiguous UTC instants for the existing API; the browser's own time zone does not decide the event time.
+
+Changing the time zone redisplays resolved dates in the new zone while preserving their instants. Times skipped by a clock change are rejected with field guidance. A repeated time requires an explicit first/second occurrence choice with its UTC offset. Existing precise instants remain unchanged when only metadata or the display zone changes; frozen history/terminal schedules remain protected. The [date-picker research and verification note](event-date-time-picker.md) explains these choices and their checks.
 
 ## Boundaries
 

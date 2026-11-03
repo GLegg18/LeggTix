@@ -1218,6 +1218,15 @@ button.text-link {
 .management-form textarea { resize: vertical; }
 .management-form textarea:focus, .management-form select:focus { outline: 2px solid var(--pink); outline-offset: 2px; }
 .management-form :disabled { opacity: .65; }
+.event-schedule { min-width: 0; padding: 20px; border: 1px solid var(--line); border-radius: 14px; }
+.event-schedule > legend { padding-inline: 8px; font-weight: 700; }
+.event-date-time { min-width: 0; align-content: start; }
+.event-date-time input[type="datetime-local"] { min-width: 0; width: 100%; max-width: 100%; font-variant-numeric: tabular-nums; }
+.event-date-time input[type="datetime-local"]:enabled:not([readonly]) { cursor: pointer; }
+.event-date-time input::-webkit-calendar-picker-indicator { padding: 6px; cursor: pointer; }
+.event-time-occurrence { display: grid; gap: 8px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+.event-time-occurrence > label { font-size: 14px; font-weight: 700; }
+.event-time-occurrence select { min-width: 0; }
 .management-records { display: grid; gap: 0; }
 .management-records li { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding-block: 16px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .management-records li > div { min-width: 0; }
