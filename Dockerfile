@@ -1,4 +1,7 @@
-FROM php:8.4-cli-bookworm AS runtime
+FROM php:8.4.27-cli-bookworm AS runtime
+
+# Load before requests are parsed; Laravel configuration is too late for upload progress.
+COPY docker/php/security.ini /usr/local/etc/php/conf.d/zz-leggtix-security.ini
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git unzip libzip-dev libonig-dev libxml2-dev \

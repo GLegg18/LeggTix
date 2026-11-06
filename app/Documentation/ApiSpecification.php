@@ -15,6 +15,7 @@ class ApiSpecification
 
         // A relative server keeps Try it out on the browser's current installation.
         $specification['servers'] = [['url' => '/api', 'description' => 'This installation']];
+        $specification['info']['description'] .= "\n\nExpected HTTP errors return a safe, nonempty message without exception details, even in local debug mode. Public hidden and missing events return the identical 404 body. Validation retains message/errors; explicit business-conflict and busy responses retain their machine codes. Unexpected JSON failures include debug details only in local/testing with APP_DEBUG enabled; all other environments return a generic 500. Error responses are private and must not be cached.";
         $schemas = &$specification['components']['schemas'];
         $schemas['UserResource']['additionalProperties'] = false;
         $schemas['UserResource']['properties']['role']['enum'] = array_column(UserRole::cases(), 'value');
@@ -162,6 +163,8 @@ class ApiSpecification
         ]);
         $event['responses']['200']['headers']['Cache-Control'] = $this->publicEventNoStoreHeader();
         $event['responses']['404'] = $this->messageResponse('The event is missing or is not published.');
+        $event['responses']['404']['content']['application/json']['example'] = ['message' => 'Resource not found.'];
+        $event['responses']['404']['headers']['Cache-Control'] = $this->noStoreHeader();
 
         $register = &$specification['paths']['/register']['post'];
         $register['summary'] = 'Complete registration with verified email proof';
@@ -302,7 +305,131 @@ class ApiSpecification
             $specification['paths']['/spa'.$path][$method] = $operation;
         }
 
+        $this->management($specification);
+
         return $specification;
+    }
+
+    private function management(array &$specification): void
+    {
+        $schemas = &$specification['components']['schemas'];
+        $event = $this->publicEventSchema();
+        $event['properties']['status'] = ['type' => 'string', 'enum' => ['draft', 'published', 'cancelled', 'completed']];
+        $event['properties']['event_type']['properties']['is_active'] = ['type' => 'boolean'];
+        $event['properties']['event_type']['required'][] = 'is_active';
+        $event['properties'] += [
+            'owner_id' => ['type' => 'integer'], 'confirmed_count' => ['type' => 'integer', 'minimum' => 0],
+            'has_history' => ['type' => 'boolean'],
+            'created_at' => ['type' => 'string', 'format' => 'date-time'],
+            'updated_at' => ['type' => 'string', 'format' => 'date-time'],
+        ];
+        $event['required'] = array_keys($event['properties']);
+        $schemas['ManagedEventResource'] = $event;
+        $person = ['type' => 'object', 'additionalProperties' => false,
+            'properties' => ['id' => ['type' => 'integer'], 'name' => ['type' => 'string']], 'required' => ['id', 'name']];
+        $reservation = $schemas['ReservationResource'];
+        $reservation['properties']['user'] = $person;
+        $reservation['required'][] = 'user';
+        $schemas['ManagedReservationResource'] = $reservation;
+        $waitlist = [
+            'id' => ['type' => 'integer'], 'event_id' => ['type' => 'integer'], 'user_id' => ['type' => 'integer'],
+            'status' => ['type' => 'string', 'enum' => ['waiting', 'promoted', 'cancelled']], 'user' => $person,
+        ];
+        foreach (['joined_at', 'created_at', 'updated_at', 'cancelled_at', 'promoted_at'] as $field) {
+            $waitlist[$field] = ['type' => in_array($field, ['cancelled_at', 'promoted_at'], true) ? ['string', 'null'] : 'string', 'format' => 'date-time'];
+        }
+        $schemas['ManagedWaitlistResource'] = ['type' => 'object', 'additionalProperties' => false,
+            'properties' => $waitlist, 'required' => array_keys($waitlist)];
+        $schemas['ManagedEventTypeResource'] = $this->publicEventSchema()['properties']['event_type'];
+        $write = array_intersect_key($event['properties'], array_flip([
+            'event_type_id', 'name', 'description', 'venue', 'starts_at', 'ends_at', 'timezone', 'capacity', 'status',
+        ]));
+        $write['event_type_id'] = ['type' => 'integer', 'minimum' => 1];
+        $write['capacity']['maximum'] = 4294967295;
+        $write['description']['description'] = 'At most 65535 UTF-8 bytes.';
+        foreach (['starts_at', 'ends_at'] as $field) {
+            $write[$field]['description'] = 'ISO 8601 with seconds and explicit Z/offset, up to six fractional digits. UTC year must be 1000 through 9999.';
+        }
+        $schemas['WriteManagedEventRequest'] = ['type' => 'object', 'additionalProperties' => false, 'properties' => $write];
+
+        $definitions = [
+            ['/manage/event-types', 'get', 'List active event types', 'ManagedEventTypeResource', true],
+            ['/manage/events', 'get', 'List managed events', 'ManagedEventResource', true],
+            ['/manage/events', 'post', 'Create an owned event', 'ManagedEventResource', false],
+            ['/manage/events/{event}', 'get', 'Inspect a managed event', 'ManagedEventResource', false],
+            ['/manage/events/{event}', 'patch', 'Edit or transition a managed event', 'ManagedEventResource', false],
+            ['/manage/events/{event}', 'delete', 'Cancel a managed event', 'ManagedEventResource', false],
+            ['/manage/events/{event}/reservations', 'get', 'Inspect reservation history', 'ManagedReservationResource', true],
+            ['/manage/events/{event}/waitlist', 'get', 'Inspect waitlist history', 'ManagedWaitlistResource', true],
+        ];
+        foreach ($definitions as [$path, $method, $summary, $resource, $list]) {
+            $operation = [
+                'operationId' => 'manage_'.($method.str_replace(['/', '{', '}'], ['_', '', ''], $path)),
+                'summary' => $summary, 'tags' => ['Event management'],
+                'description' => 'Organiser owns the event or admin manages any event. Current regular_user accounts cannot manage events, including events they previously owned. Private responses omit contact details and credentials. Lists accept only per_page and opaque cursor. Event list is newest ID first; reservations/types use ascending ID; waitlist uses joined_at then ID, including terminal history. Draft publication requires a future start and active type. Schedule/type edits stop after any history. Capacity edits use the event inventory lock and fill existing FIFO waiters before newcomers. Completion retains confirmed attendance and closes waiters; cancellation closes active attempts and resets occupancy atomically. Terminal events allow name/description/venue edits only. No reassignment, unpublish or reopen.',
+                'security' => $specification['paths']['/events/{event}/reservations']['post']['security'] ?? $specification['security'] ?? [],
+                'responses' => [
+                    '401' => $this->messageResponse('Authentication is required.'),
+                    '403' => $this->messageResponse('The current account may not manage this event.'),
+                    '404' => $this->messageResponse('Resource not found.'),
+                    '422' => ['$ref' => '#/components/responses/ValidationException'],
+                ],
+            ];
+            $operation['security'][] = ['spaSession' => []];
+            $operation['parameters'] = [];
+            if (str_contains($path, '{event}')) {
+                $operation['parameters'][] = ['name' => 'event', 'in' => 'path', 'required' => true, 'schema' => ['type' => 'integer', 'minimum' => 1]];
+            }
+            if ($list) {
+                $operation['parameters'] = array_merge($operation['parameters'], $specification['paths']['/events']['get']['parameters']);
+                $body = $specification['paths']['/events']['get']['responses']['200']['content']['application/json']['schema'];
+                $body['properties']['data']['items'] = ['$ref' => '#/components/schemas/'.$resource];
+            } else {
+                $body = ['type' => 'object', 'additionalProperties' => false,
+                    'properties' => ['data' => ['$ref' => '#/components/schemas/'.$resource]], 'required' => ['data']];
+            }
+            $operation['responses'][$method === 'post' ? '201' : '200'] = $this->jsonResponse('Deliberate private resource fields.', $body);
+            if (in_array($method, ['post', 'patch'], true)) {
+                $input = $schemas['WriteManagedEventRequest'];
+                if ($method === 'post') {
+                    $input['required'] = ['event_type_id', 'name', 'description', 'venue', 'starts_at', 'timezone', 'capacity'];
+                    $input['properties']['status']['enum'] = ['draft', 'published'];
+                }
+                $operation['requestBody'] = ['required' => true, 'content' => ['application/json' => ['schema' => $input]]];
+            }
+            if ($method === 'delete') {
+                $operation['requestBody'] = ['required' => false, 'content' => ['application/json' => ['schema' => [
+                    'type' => 'object', 'additionalProperties' => false, 'properties' => new \stdClass,
+                ]]]];
+                $operation['description'] .= ' Repeating cancellation of a cancelled event succeeds; completed events cannot be cancelled. There is no hard deletion.';
+            }
+            if ($method !== 'get') {
+                $operation['responses']['400'] = $this->messageResponse('Malformed JSON.');
+                $operation['responses']['415'] = $this->messageResponse('Use a JSON object; cancellation also accepts no body.');
+                $operation['responses']['429'] = $this->rateLimitResponse();
+                $operation['responses']['503'] = $this->jsonResponse('Database concurrency retries exhausted. Retry shortly.', [
+                    'type' => 'object', 'additionalProperties' => false,
+                    'properties' => ['message' => ['type' => 'string'], 'code' => ['type' => 'string', 'const' => 'event_busy']],
+                    'required' => ['message', 'code'],
+                ]);
+                $operation['responses']['503']['headers']['Retry-After'] = ['schema' => ['type' => 'integer', 'const' => 1]];
+                $operation['description'] .= ' Mutation limits: 60/minute per account and 120/minute per IP, shared between API and browser routes. Unknown body/query fields are rejected; no server-owned identity or occupancy values are accepted.';
+            }
+            foreach ($operation['responses'] as &$response) {
+                if (! isset($response['$ref'])) {
+                    $response['headers']['Cache-Control'] = $this->noStoreHeader();
+                }
+            }
+            unset($response);
+            $specification['paths'][$path][$method] = $operation;
+            $operation['operationId'] = 'spa_'.$operation['operationId'];
+            $operation['security'] = [['spaSession' => []]];
+            $operation['description'] = 'Configured first-party browser origin and HttpOnly session required. Initialize the CSRF cookie and send X-XSRF-TOKEN on writes. '.$operation['description'];
+            if ($method !== 'get') {
+                $operation['responses']['419'] = $this->messageResponse('The CSRF/session token is missing or expired.');
+            }
+            $specification['paths']['/spa'.$path][$method] = $operation;
+        }
     }
 
     private function passwordSchema(): array
@@ -367,8 +494,8 @@ class ApiSpecification
     private function messageResponse(string $description): array
     {
         return $this->jsonResponse($description, [
-            'type' => 'object',
-            'properties' => ['message' => ['type' => 'string']],
+            'type' => 'object', 'additionalProperties' => false,
+            'properties' => ['message' => ['type' => 'string', 'minLength' => 1]],
             'required' => ['message'],
         ]);
     }

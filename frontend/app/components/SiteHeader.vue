@@ -20,6 +20,7 @@ const { isDark, setTheme } = useTheme();
         class="flex items-center gap-2 sm:gap-4"
         aria-label="Main navigation"
       >
+        <NuxtLink v-if="status === 'ready' && user && ['organiser', 'admin'].includes(user.role)" to="/manage/events" class="nav-link">Manage events</NuxtLink>
         <div class="theme-control">
           <button
             type="button"

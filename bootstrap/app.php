@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\ApiErrorResponse;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -24,10 +25,12 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
+            fn (Request $request) => ApiErrorResponse::expectsJson($request),
         );
-        $exceptions->respond(function (Response $response): Response {
-            if (request()->is('api/spa/*', 'sanctum/csrf-cookie', 'api/registration/email-verifications*', 'api/login*', 'api/trusted-devices', 'api/logout')) {
+        $exceptions->render([ApiErrorResponse::class, 'render']);
+        $exceptions->respond(function (Response $response, \Throwable $exception, Request $request): Response {
+            if ((ApiErrorResponse::expectsJson($request) && $response->getStatusCode() >= 400)
+                || $request->is('api/manage/*', 'api/spa/*', 'sanctum/csrf-cookie', 'api/registration/email-verifications*', 'api/login*', 'api/trusted-devices', 'api/logout')) {
                 $response->headers->set('Cache-Control', 'no-store, private');
             }
 

@@ -85,6 +85,12 @@ const forget = async () => {
           </button>
         </section>
         <div class="flex flex-col gap-6">
+          <section v-if="['organiser', 'admin'].includes(user.role)" class="account-card">
+            <p class="eyebrow">YOUR EVENTS</p>
+            <h2 class="mt-4">Make it happen.</h2>
+            <p class="mt-3 text-muted">Create drafts, manage your events and inspect reservations and waitlists.</p>
+            <NuxtLink to="/manage/events" class="button button-primary mt-6">Manage events <span aria-hidden="true">↗</span></NuxtLink>
+          </section>
           <section class="account-card account-coming">
             <span class="eyebrow">GOOD THINGS TAKE A LITTLE SETTING UP</span>
             <h2 class="mt-4">Next up: being there.</h2>

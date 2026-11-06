@@ -1,6 +1,10 @@
 # Project documentation
 
+The [dependency security guide](dependency-security.md) records runtime baselines and safe patch/audit procedures; the [6 November validation report](dependency-security-validation.md) records current remediation, verification and outstanding upstream follow-up.
+
 For endpoint reference and interactive requests, open the running app's [Swagger API explorer](http://localhost:8000/docs/api). The [OpenAPI JSON](http://localhost:8000/docs/api.json) is generated from Laravel with explicit corrections for the implemented response and strict booking-input contracts. The explorer uses local browser assets and is restricted to local/test environments. Markdown notes below cover design decisions, setup and verification history.
+
+The [API error guide](api-errors.md) documents generic expected errors even in debug mode, identical hidden/missing `404` responses, preserved validation/business codes and headers, and the local/testing-only boundary for unexpected JSON diagnostics. Normal HTML pages still require production debug mode to be disabled.
 
 Start with the [database design decision and research note](database-design.md), written for [issue #27](https://github.com/GLegg18/LeggTix/issues/27). It includes the MVP tables, permissions, lifecycle rules, concurrency protocol, and implementation test plan.
 
@@ -13,6 +17,10 @@ The [Nuxt frontend guide](frontend.md) covers [issue #20](https://github.com/GLe
 The [local authentication performance investigation](auth-performance-validation.md) records the Windows dependency-storage bottleneck, shared Docker dependency volume, real-browser before/after timings and unchanged authentication protections.
 
 The [event guide](events.md) documents public upcoming-list and published-detail endpoints from [issue #7](https://github.com/GLegg18/LeggTix/issues/7), their explicit public fields, advisory availability and stable cursor pagination. The [public event manual plan](public-events-manual-test-plan.md) supplies expected outcomes, and the [issue #7 verification report](issue-7-validation.md) records checks actually performed. The guide also covers models, relationships, protected fields, UTC scheduling, lifecycle read helpers and factory states from [issue #6](https://github.com/GLegg18/LeggTix/issues/6); the [event model manual plan](event-manual-test-plan.md) and [issue #6 verification report](issue-6-validation.md) retain that milestone's checks.
+
+The [event management guide](event-management.md) covers [issue #8](https://github.com/GLegg18/LeggTix/issues/8): owner/admin policies, private event/attendee/waitlist lists, explicit event writes, lifecycle and inventory locks, event cancellation/completion, and bounded capacity-increase promotion. The [Nuxt organiser workspace](event-management-ui.md) uses the corresponding session-authenticated browser routes. The [management manual plan](event-management-manual-test-plan.md) supplies expected outcomes; the [original issue #8 report](issue-8-validation.md) and [5 November pre-PR validation](issue-8-pre-pr-validation.md) record actual checks and developer/tester/security findings. Customer cancellation, public waitlist join/leave and dedicated promotion notifications remain separate tickets.
+
+The [event date/time picker follow-up](event-date-time-picker.md) records the 29 October native calendar/time controls, typed entry, named-zone conversion, daylight-saving handling, research sources and verification. Organisers no longer need to type ISO timestamps into the browser form.
 
 The [booking guide](reservations.md) documents the reservation model, authenticated creation endpoint, MySQL transaction, retry outcomes and staged waitlist limitation for [issue #9](https://github.com/GLegg18/LeggTix/issues/9). The [reservation manual plan](reservation-manual-test-plan.md) gives repeatable checks; the [issue #9 validation report](issue-9-validation.md) records execution and review findings.
 
@@ -46,4 +54,4 @@ Read [reservation races](reservation-races.md) for two-customer timelines coveri
 
 The future backlog is [#28](https://github.com/GLegg18/LeggTix/issues/28) through [#35](https://github.com/GLegg18/LeggTix/issues/35), with dependencies and activation decisions in the extension plan. Existing MVP race verification remains [#12](https://github.com/GLegg18/LeggTix/issues/12).
 
-The five domain migrations, authentication, public event discovery, event models/factories, local demo seeders and reservation creation are implemented. Booking uses the event-first concurrency protocol and conservatively protects existing waitlist priority. Event management, cancellation/history and waitlist workflows remain downstream work; the extension diagrams describe future scope.
+The five domain migrations, authentication, public event discovery, event models/factories, local demo seeders, reservation creation and owner/admin event management are implemented. Booking and management share the event-first inventory protocol. Capacity increases can promote current FIFO waiters through bounded resumable batches; direct bookings refuse queue bypass. Customer reservation cancellation/history, public waitlist join/leave, their full promotion integration and dedicated notifications remain downstream work. The extension diagrams describe future scope.

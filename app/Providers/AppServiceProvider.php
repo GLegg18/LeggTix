@@ -83,6 +83,11 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(30)->by('reservations:user:'.$request->user()->getAuthIdentifier()),
             Limit::perMinute(120)->by('reservations:ip:'.$request->ip()),
         ]);
+
+        RateLimiter::for('event-management', fn (Request $request): array => [
+            Limit::perMinute(60)->by('event-management:user:'.$request->user()->getAuthIdentifier()),
+            Limit::perMinute(120)->by('event-management:ip:'.$request->ip()),
+        ]);
     }
 
     private function emailRateKey(Request $request): string
