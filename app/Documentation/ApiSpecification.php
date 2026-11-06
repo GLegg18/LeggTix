@@ -15,6 +15,7 @@ class ApiSpecification
 
         // A relative server keeps Try it out on the browser's current installation.
         $specification['servers'] = [['url' => '/api', 'description' => 'This installation']];
+        $specification['info']['description'] .= "\n\nExpected HTTP errors return a safe, nonempty message without exception details, even in local debug mode. Public hidden and missing events return the identical 404 body. Validation retains message/errors; explicit business-conflict and busy responses retain their machine codes. Unexpected JSON failures include debug details only in local/testing with APP_DEBUG enabled; all other environments return a generic 500. Error responses are private and must not be cached.";
         $schemas = &$specification['components']['schemas'];
         $schemas['UserResource']['additionalProperties'] = false;
         $schemas['UserResource']['properties']['role']['enum'] = array_column(UserRole::cases(), 'value');
@@ -162,6 +163,8 @@ class ApiSpecification
         ]);
         $event['responses']['200']['headers']['Cache-Control'] = $this->publicEventNoStoreHeader();
         $event['responses']['404'] = $this->messageResponse('The event is missing or is not published.');
+        $event['responses']['404']['content']['application/json']['example'] = ['message' => 'Resource not found.'];
+        $event['responses']['404']['headers']['Cache-Control'] = $this->noStoreHeader();
 
         $register = &$specification['paths']['/register']['post'];
         $register['summary'] = 'Complete registration with verified email proof';
@@ -404,7 +407,11 @@ class ApiSpecification
                 $operation['responses']['400'] = $this->messageResponse('Malformed JSON.');
                 $operation['responses']['415'] = $this->messageResponse('Use a JSON object; cancellation also accepts no body.');
                 $operation['responses']['429'] = $this->rateLimitResponse();
-                $operation['responses']['503'] = $this->messageResponse('Database concurrency retries exhausted. Retry shortly.');
+                $operation['responses']['503'] = $this->jsonResponse('Database concurrency retries exhausted. Retry shortly.', [
+                    'type' => 'object', 'additionalProperties' => false,
+                    'properties' => ['message' => ['type' => 'string'], 'code' => ['type' => 'string', 'const' => 'event_busy']],
+                    'required' => ['message', 'code'],
+                ]);
                 $operation['responses']['503']['headers']['Retry-After'] = ['schema' => ['type' => 'integer', 'const' => 1]];
                 $operation['description'] .= ' Mutation limits: 60/minute per account and 120/minute per IP, shared between API and browser routes. Unknown body/query fields are rejected; no server-owned identity or occupancy values are accepted.';
             }
@@ -487,8 +494,8 @@ class ApiSpecification
     private function messageResponse(string $description): array
     {
         return $this->jsonResponse($description, [
-            'type' => 'object',
-            'properties' => ['message' => ['type' => 'string']],
+            'type' => 'object', 'additionalProperties' => false,
+            'properties' => ['message' => ['type' => 'string', 'minLength' => 1]],
             'required' => ['message'],
         ]);
     }

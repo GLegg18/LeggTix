@@ -1,5 +1,7 @@
 # Event date/time entry follow-up
 
+The [6 November dependency review](dependency-security-validation.md) supersedes this report's dependency-alert status. The audit below remains the original 29 October snapshot.
+
 Date: 29 October 2026. The create/edit form previously asked organisers to type ISO timestamps such as `2027-12-01T18:00:00Z`. The user requested calendar/dropdown entry with an option to type. This follow-up changes the scheduling UI while retaining Laravel's existing explicit-instant API, permissions and lifecycle rules.
 
 ## Research and design decision

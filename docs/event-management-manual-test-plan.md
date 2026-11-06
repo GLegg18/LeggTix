@@ -2,6 +2,8 @@
 
 These steps create dedicated local review events. Do not cancel seeded events or run the destructive PHPUnit suite in the normal application container. Completed/cancelled event and attempt rows are retained intentionally.
 
+The [5 November pre-PR validation report](issue-8-pre-pr-validation.md) records the latest execution of this plan, including the live API/browser results and coverage limits. The [API error guide](api-errors.md) describes the expected error bodies.
+
 ## 1. Prepare the local application
 
 1. Open Docker Desktop, select Linux containers, and wait until its engine is running. Open PowerShell in `C:\Users\georg\Documents\LeggTix`:
@@ -85,7 +87,7 @@ These steps create dedicated local review events. Do not cancel seeded events or
     $reviewCreated.data | Select-Object id, owner_id, status, capacity, confirmed_count
     ```
 
-    Expect `201`, status `draft`, owner equal to the signed-in organiser, capacity two, confirmed zero. The type response contains only `id`, `slug`, `name`. Draft/public detail returns `404`; owner private detail returns `200` and `Cache-Control: no-store, private`.
+    Expect `201`, status `draft`, owner equal to the signed-in organiser, capacity two, confirmed zero. The type response contains only `id`, `slug`, `name`. Draft/public detail returns `404` with exactly `{"message":"Resource not found."}`, identical to a missing event even when signed in as its owner. It must contain no exception, file, line or trace fields, including with local debug enabled or without an `Accept` header. Owner private detail returns `200` and `Cache-Control: no-store, private`.
 
 12. Publish, reserve as the customer, and inspect the private history:
 
@@ -132,6 +134,14 @@ These steps create dedicated local review events. Do not cancel seeded events or
 15. Submit `{"status":"published"}` to the cancelled event and expect `422` (terminal events cannot reopen). Repeat the customer reservation request for it and expect `409` with `event_not_bookable`. On a still-published dedicated event, `{"status":"draft"}` must also return `422`. Do not cancel or edit a seeded event merely to run this check.
 
 ## 4. Verify concurrency and delivery in the isolated runner
+
+For a repeatable equivalent of steps 10–15 and the API portion of steps 18–19, run this from the repository root:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-event-management.ps1
+```
+
+This uses the running local app, real password/email-code authentication, Mailpit and the worker. Avoid concurrent demo-account logins during the run. It refuses non-local database/mail/Redis destinations, creates uniquely tagged review events through the API, checks two bookings and attendee pagination, waits for both confirmation emails before cancellation, and tests error/ownership boundaries. It cancels only its own events and revokes its issued tokens in cleanup. Expect exit zero and a token-free JSON evidence path under `storage/app/private/`; retained cancelled events/attempts and review emails are intentional. This runner does not replace the browser or isolated concurrency tests.
 
 16. Run the independent acceptance/race suite, from the repository root:
 

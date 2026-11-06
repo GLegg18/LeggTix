@@ -4,14 +4,14 @@ LeggTix is an API-first event reservation and waitlist service. The backend is a
 
 ## Stack
 
-- PHP 8.4 and Laravel 13
+- PHP 8.4.27 and Laravel 13
 - MySQL 8 for application data
 - Redis for cache and queue connections
 - Mailpit 1.31.4 for local email preview
 - PHP Redis extension pinned to 6.3.0 in the Dockerfile
 - Docker Compose for the local services
 - PHPUnit for the Laravel test runner
-- Nuxt 4, Vue 3 and Tailwind CSS 4, running on Node 24 in Docker
+- Nuxt 4, Vue 3 and Tailwind CSS 4, running on Node 24.22.2 in Docker
 
 Laravel owns the business rules. Nuxt provides the homepage, verified registration, login, account shell and the [organiser workspace](docs/event-management-ui.md) at `/manage/events`. The workspace supports create/edit/publish/cancel and private attendee/waitlist inspection through the [management API](docs/event-management.md). Customer event discovery and reservation pages remain [#21](https://github.com/GLegg18/LeggTix/issues/21); optional Filament administration/catalogue tools remain [#22](https://github.com/GLegg18/LeggTix/issues/22).
 
@@ -22,6 +22,8 @@ Laravel owns the business rules. Nuxt provides the homepage, verified registrati
 - Git
 
 PHP and Composer run in the application container; Node.js and npm run in the Nuxt container. No host PHP, Composer, Node.js or npm installation is required. Nuxt dependencies are pinned in `frontend/package-lock.json`; the API explorer's pinned JavaScript/CSS assets are committed under `resources/vendor/swagger-ui`, with their licenses and provenance. Installed dependencies and generated application files are ignored. First builds and dependency installation need network access.
+
+The [dependency security guide](docs/dependency-security.md) covers runtime patching, startup mitigations, audit commands and safe rebuild/recreation of existing containers. The [6 November review](docs/dependency-security-validation.md) records current findings and verification.
 
 ## First run
 
@@ -75,7 +77,7 @@ Allow several seconds for the schema to generate when opening the explorer.
 
 Browse `GET /api/events` without authentication to find upcoming published events, and use `GET /api/events/{event}` for detail. Published past events remain available by detail URL. Use the login operation to obtain a token for booking or owner/admin management under `/api/manage`, then click **Authorize** and paste the raw `access_token`; Swagger adds the `Bearer` prefix. Authorization lasts only for the current page session. **Try it out** sends real requests to your local database. The [management guide](docs/event-management.md) documents writable fields, private lists and lifecycle outcomes.
 
-The [authentication guide](docs/authentication.md), [public event guide](docs/events.md) and [booking guide](docs/reservations.md) retain implementation notes and reproducible checks. The API returns JSON errors even when a client omits its `Accept` header.
+The [authentication guide](docs/authentication.md), [public event guide](docs/events.md) and [booking guide](docs/reservations.md) retain implementation notes and reproducible checks. The API returns JSON errors even when a client omits its `Accept` header. The [API error guide](docs/api-errors.md) documents safe expected errors and the environment/debug boundary for unexpected failures.
 
 New accounts must [verify email ownership before registration](docs/registration-email-verification.md): request an email code, read it in Mailpit, verify the code, then submit the returned one-use registration proof with name/password. The Swagger explorer exposes each step. All later logins, including existing/demo accounts, require the [email login factor](docs/login-email-verification.md). Browsers may opt in to seven days of trust after a successful code; the password remains required.
 

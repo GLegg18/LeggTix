@@ -11,6 +11,8 @@ Both reads work without authentication and return JSON, including errors when `A
 - `GET /api/events` lists only published events with `starts_at` strictly after the current UTC time. Equality is excluded. Full events remain listed, and retiring an event type does not hide an existing published event.
 - `GET /api/events/{event}` returns one published event, including a past event. Draft, cancelled, completed and missing IDs return the same generic `404` without an event payload. There is no owner/admin exception on this public endpoint.
 
+Hidden and missing detail responses contain exactly `{"message":"Resource not found."}`, including with `APP_DEBUG=true`, and use `Cache-Control: no-store, private`. Invalid route IDs use the same not-found response. The [API error guide](api-errors.md) explains expected errors, validation/business-response preservation and the environment boundary for unexpected JSON diagnostics.
+
 The list returns `data`, `links` and `meta`; detail returns `data`. Both use the same explicit public event fields:
 
 | Field | Meaning |

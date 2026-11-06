@@ -4,6 +4,8 @@
 
 ## Local run
 
+The Docker runtime is Node 24.22.2 with a matching minimum package engine. Runtime/package updates and the reviewed transitive security overrides are documented in the [dependency security guide](dependency-security.md) and its [validation report](dependency-security-validation.md).
+
 Use Docker Desktop with Linux containers and Compose v2, as described in the root README. No host Node/npm installation is necessary. From the repository root:
 
 ```powershell

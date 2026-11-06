@@ -2,6 +2,8 @@
 
 The [29 October date/time picker follow-up](event-date-time-picker.md) supersedes the raw ISO schedule inputs described by this baseline. This report retains the original 27 October implementation and execution evidence.
 
+The [5 November pre-PR validation](issue-8-pre-pr-validation.md) records the later API error cleanup and execution of the complete management manual plan, including live booking/cancellation requests and Mailpit delivery that were not performed in this baseline review.
+
 Work completed locally on 27 October 2026 for [event-owner authorisation and management #8](https://github.com/GLegg18/LeggTix/issues/8), using the developer, independent tester and read-only security reviewer roles. A separate explorer reviewed the project Markdown guidance, including the database contract and historical milestone notes. The coordinator implemented the Nuxt workspace and owns this consolidated report.
 
 ## Result and scope
